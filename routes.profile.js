@@ -6,6 +6,7 @@ const prisma = new PrismaClient();
 
 // Use authenticateToken from routes.auth for consistency
 const { authenticateToken } = require('./routes.auth');
+console.log(authenticateToken); // Debug middleware import
 
 // Get user profile
 router.get('/me', authenticateToken, async (req, res) => {
