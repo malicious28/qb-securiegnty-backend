@@ -1,60 +1,47 @@
-require('dotenv').config();
+
+
 const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
-const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
-const prisma = require('@prisma/client');
-
 const app = express();
 
-const passport = require('passport');
-const { router: authRouter } = require('./routes.auth');
 // Security Middlewares
 app.use(helmet());
-app.use(cors({ 
-  origin: [process.env.FRONTEND_URL, 'https://qb-securiegnty.netlify.app'], 
-  credentials: true 
+app.use(cors({
+  origin: [
+    'https://qbsecuriegnty.com', // your frontend
+    'https://qb-securiegnty-backend-production.up.railway.app', // your backend
+    'http://localhost:3000',
+    'http://127.0.0.1:3000'
+  ],
+  credentials: true,
 }));
 app.use(express.json());
 app.use(morgan('combined'));
-app.use(passport.initialize());
 
-// Rate Limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-app.use(limiter);
 
-// Auth routes
+const { router: authRouter } = require('./routes.auth');
 app.use('/api/auth', authRouter);
-// Password reset routes
+
+
 app.use('/api/auth', require('./routes.reset'));
 
-// User profile routes
+
 app.use('/api/profile', require('./routes.profile'));
 
-// Book Appointment route
+
 app.use('/api/appointments', require('./routes.appointment'));
 
-// Meeting Details confirmation route (for sending meeting scheduled email)
+
 app.use('/api/meeting-details', require('./routes.meetingdetails'));
 
-// Early Access route
+
 app.use('/api/early-access', require('./routes.earlyaccess'));
 
-// Basic route
+// Minimal route for error isolation
 app.get('/', (req, res) => {
-  res.json({ message: 'Backend is running securely!' });
-});
-
-// Error Handling
-app.use((err, req, res, next) => {
-  console.error(err);
-  res.status(500).json({ error: 'Internal Server Error' });
+  res.json({ message: 'Backend is running (all routes enabled).' });
 });
 
 module.exports = app;
