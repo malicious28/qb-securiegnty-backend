@@ -8,15 +8,7 @@ const app = express();
 
 // Security Middlewares
 app.use(helmet());
-app.use(cors({
-  origin: [
-    'https://qbsecuriegnty.com', // your frontend
-    'https://qb-securiegnty-backend-production.up.railway.app', // your backend
-    'http://localhost:3000',
-    'http://127.0.0.1:3000'
-  ],
-  credentials: true,
-}));
+app.use(cors());
 app.use(express.json());
 app.use(morgan('combined'));
 
