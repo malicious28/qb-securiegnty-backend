@@ -5,9 +5,8 @@ const sendEarlyAccessEmail = require('./utils/sendEarlyAccessEmail');
 const router = express.Router();
 const prisma = new PrismaClient();
 
-const { authenticateToken } = require('./routes.auth');
-// Early Access (protected)
-router.post('/', authenticateToken, async (req, res) => {
+// Early Access (public - no auth required)
+router.post('/', async (req, res) => {
   try {
     const { name, email, occupation } = req.body;
     if (!name || !email || !occupation) {
