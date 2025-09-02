@@ -140,18 +140,6 @@ router.post('/register', async (req, res) => {
         isVerified: true
       }
     });
-    // Generate JWT token for immediate login
-    const token = jwt.sign(
-      { 
-        userId: newUser.id, 
-        email: newUser.email,
-        firstName: newUser.firstName,
-        lastName: newUser.lastName 
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
     // Send confirmation email
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
@@ -160,7 +148,10 @@ router.post('/register', async (req, res) => {
       html: `<p>Hi ${firstName},</p><p>Congratulations! You have been successfully registered at QB Securiegnty.</p><p>We're excited to have you on board.</p>`
     });
 
-    // Return success with token and user data for automatic login
+    // Generate JWT token for auto-login
+    const token = jwt.sign({ userId: newUser.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+    // Return success with token and user data for automatic login + onboarding redirect
     res.status(201).json({ 
       message: 'Account created successfully. You are now logged in!',
       token,
@@ -198,19 +189,10 @@ router.post('/login', async (req, res) => {
     if (!user.isVerified) return res.status(403).json({ error: 'Email not verified. Please check your inbox.' });
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ error: 'Invalid credentials' });
-    const token = jwt.sign(
-      { 
-        userId: user.id, 
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName 
-      }, 
-      process.env.JWT_SECRET, 
-      { expiresIn: '7d' }
-    );
+    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
     
+    // Return token and user data for consistent response format
     res.json({ 
-      message: 'Login successful!',
       token,
       user: {
         id: user.id,
