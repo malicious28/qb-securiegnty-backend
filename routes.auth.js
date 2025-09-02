@@ -171,7 +171,9 @@ router.post('/register', async (req, res) => {
         email: newUser.email,
         country: newUser.country,
         isVerified: newUser.isVerified
-      }
+      },
+      isNewSignup: true, // Flag to indicate this is a new signup for onboarding
+      redirectTo: 'onboarding' // Tell frontend where to redirect
     });
   } catch (err) {
     res.status(500).json({ error: 'Registration failed.' });
