@@ -140,6 +140,18 @@ router.post('/register', async (req, res) => {
         isVerified: true
       }
     });
+    // Generate JWT token for immediate login
+    const token = jwt.sign(
+      { 
+        userId: newUser.id, 
+        email: newUser.email,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName 
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
     // Send confirmation email
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
@@ -147,7 +159,20 @@ router.post('/register', async (req, res) => {
       subject: 'Welcome to QB Securiegnty!',
       html: `<p>Hi ${firstName},</p><p>Congratulations! You have been successfully registered at QB Securiegnty.</p><p>We're excited to have you on board.</p>`
     });
-    res.status(201).json({ message: 'Account created successfully. Confirmation email sent.' });
+
+    // Return success with token and user data for automatic login
+    res.status(201).json({ 
+      message: 'Account created successfully. You are now logged in!',
+      token,
+      user: {
+        id: newUser.id,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        email: newUser.email,
+        country: newUser.country,
+        isVerified: newUser.isVerified
+      }
+    });
   } catch (err) {
     res.status(500).json({ error: 'Registration failed.' });
   }
@@ -171,8 +196,29 @@ router.post('/login', async (req, res) => {
     if (!user.isVerified) return res.status(403).json({ error: 'Email not verified. Please check your inbox.' });
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ error: 'Invalid credentials' });
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-    res.json({ token });
+    const token = jwt.sign(
+      { 
+        userId: user.id, 
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName 
+      }, 
+      process.env.JWT_SECRET, 
+      { expiresIn: '7d' }
+    );
+    
+    res.json({ 
+      message: 'Login successful!',
+      token,
+      user: {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        country: user.country,
+        isVerified: user.isVerified
+      }
+    });
   } catch (err) {
     res.status(500).json({ error: 'Login failed' });
   }
