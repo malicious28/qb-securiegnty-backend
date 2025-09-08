@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "start": "node bulletproof-final-server.js",
+    "dev": "node bulletproof-final-server.js",
+    "bulletproof": "node bulletproof-final-server.js",
+    "old-server": "node server.js",
     "test": "jest"
   },
   "keywords": [],
