@@ -2,8 +2,8 @@ const request = require('supertest');
 const express = require('express');
 require('dotenv').config();
 
-// Import your app (assuming index.js exports the app)
-const app = require('../index');
+// Import your app from ultra-secure-server.js
+const app = require('../ultra-secure-server');
 
 describe('Backend API Endpoints', () => {
   it('GET / should return backend status', async () => {
