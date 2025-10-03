@@ -3,8 +3,8 @@ services:
     name: qb-securiegnty-backend
     env: node
     plan: free
-    buildCommand: npm install && npm audit fix --force
-    startCommand: node server.js
+    buildCommand: rm -rf node_modules package-lock.json && npm cache clean --force && npm install --verbose
+    startCommand: node server-test.js
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
