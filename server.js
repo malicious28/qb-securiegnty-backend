@@ -329,6 +329,20 @@ secureRoutes.forEach(({ path, mount, name }) => {
 });
 
 // ============================================
+// WAKE-UP ENDPOINT (FOR RENDER FREE TIER)
+// ============================================
+
+app.get('/wake-up', (req, res) => {
+  res.json({
+    status: 'awake',
+    message: 'Server is now awake and ready!',
+    timestamp: new Date().toISOString(),
+    uptime: Math.round(process.uptime()),
+    tip: 'Use this endpoint to wake up the server if it was sleeping'
+  });
+});
+
+// ============================================
 // ULTRA-SECURE HEALTH CHECK
 // ============================================
 
@@ -552,6 +566,15 @@ async function startSecureServer(port = PORT) {
 async function initializeSecureServer() {
   try {
     await startSecureServer(PORT);
+    
+    // Initialize keep-alive service for Render free tier
+    if (process.env.NODE_ENV === 'production' && process.env.RENDER) {
+      const KeepAliveService = require('./utils/keepalive');
+      const serverUrl = process.env.RENDER_EXTERNAL_URL || `https://qb-securiegnty-backend.onrender.com`;
+      const keepAlive = new KeepAliveService(serverUrl);
+      keepAlive.startKeepAlive();
+      console.log('🔄 Keep-alive service started for Render deployment');
+    }
     
     // Security monitoring heartbeat
     setInterval(() => {
