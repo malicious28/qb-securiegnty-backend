@@ -2,20 +2,27 @@
   "name": "backend",
   "version": "1.0.0",
   "main": "server.js",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
+    "build": "npm ci --only=production",
+    "postinstall": "npm audit fix --force || true",
     "test": "jest"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "QB Securiegnty Backend - Ultra Secure Server",
   "dependencies": {
     "@prisma/client": "^6.11.1",
     "axios": "^1.12.2",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
+    "debug": "^4.3.4",
     "dotenv": "^17.2.0",
     "express": "^4.19.2",
     "express-mongo-sanitize": "^2.2.0",
