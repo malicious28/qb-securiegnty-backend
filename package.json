@@ -1,14 +1,10 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node ultra-secure-server.js",
-    "dev": "node ultra-secure-server.js",
-    "bulletproof": "node bulletproof-final-server.js",
-    "ultra-secure": "node ultra-secure-server.js",
-    "security-test": "node security-test-suite.js",
-    "old-server": "node server.js",
+    "start": "node server.js",
+    "dev": "node server.js",
     "test": "jest"
   },
   "keywords": [],
