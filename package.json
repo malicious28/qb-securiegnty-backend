@@ -1,14 +1,14 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "main": "server-test.js",
+  "main": "server.js",
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=8.0.0"
   },
   "scripts": {
-    "start": "node server-test.js",
-    "start-full": "node server.js",
+    "start": "node server.js",
+    "start-test": "node server-test.js",
     "dev": "node server.js",
     "build": "npm install --production --no-optional",
     "postinstall": "echo 'Dependencies installed successfully'",
