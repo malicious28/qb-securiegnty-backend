@@ -4,7 +4,7 @@ services:
     env: node
     plan: free
     buildCommand: rm -rf node_modules package-lock.json && npm cache clean --force && npm install --verbose
-    startCommand: node server-test.js
+    startCommand: node server.js
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
