@@ -1,16 +1,18 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "main": "server.js",
+  "main": "server-test.js",
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=8.0.0"
   },
   "scripts": {
-    "start": "node server.js",
+    "start": "node server-test.js",
+    "start-full": "node server.js",
     "dev": "node server.js",
-    "build": "npm ci --only=production",
-    "postinstall": "npm audit fix --force || true",
+    "build": "npm install --production --no-optional",
+    "postinstall": "echo 'Dependencies installed successfully'",
+    "clean": "rm -rf node_modules package-lock.json",
     "test": "jest"
   },
   "keywords": [],
@@ -24,7 +26,7 @@
     "cors": "^2.8.5",
     "debug": "^4.3.4",
     "dotenv": "^17.2.0",
-    "express": "^4.19.2",
+    "express": "^4.21.0",
     "express-mongo-sanitize": "^2.2.0",
     "express-rate-limit": "^7.5.1",
     "express-validator": "^7.2.1",
