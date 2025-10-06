@@ -600,7 +600,7 @@ router.get('/protected', authenticateToken, (req, res) => {
 });
 
 // ============================================
-// GOOGLE OAUTH ROUTES
+// GOOGLE OAUTH ROUTES (STATELESS)
 // ============================================
 
 // Initiate Google OAuth
@@ -616,7 +616,8 @@ router.get('/google',
     
     passport.authenticate('google', { 
       scope: ['profile', 'email'],
-      callbackURL: callbackURL
+      callbackURL: callbackURL,
+      session: false // Disable session - use stateless OAuth
     })(req, res, next);
   }
 );
@@ -624,10 +625,25 @@ router.get('/google',
 // Google OAuth callback
 router.get('/google/callback',
   authLimiter,
-  passport.authenticate('google', { failureRedirect: '/login?error=oauth_failed' }),
+  passport.authenticate('google', { 
+    failureRedirect: '/login?error=oauth_failed',
+    failureMessage: true,
+    session: false // Disable session - use stateless OAuth
+  }),
   async (req, res) => {
     try {
-      console.log('🎉 Google OAuth successful for user:', req.user.email);
+      console.log('🎉 Google OAuth callback hit');
+      console.log('User object:', req.user ? 'Present' : 'Missing');
+      
+      if (!req.user) {
+        console.error('❌ No user object from Passport');
+        return res.status(500).json({ 
+          error: 'Authentication failed - no user object',
+          requestId: req.requestId 
+        });
+      }
+      
+      console.log('✅ User authenticated:', req.user.email);
       
       // Generate JWT token for the user
       const tokenPayload = {
@@ -646,18 +662,24 @@ router.get('/google/callback',
         { expiresIn: JWT_CONFIG.refreshTokenExpiry }
       );
 
-      // Log successful OAuth login
-      console.log(`✅ Google OAuth login successful for ${req.user.email} from IP ${req.ip}`);
+      console.log(`✅ Tokens generated for ${req.user.email}`);
       
       // Redirect to frontend with tokens
       const frontendUrl = process.env.FRONTEND_URL || 'https://qbsecuriegnty.com';
       const redirectUrl = `${frontendUrl}/social-login-success?token=${accessToken}&refresh=${refreshToken}`;
       
+      console.log(`✅ Redirecting to: ${frontendUrl}/social-login-success`);
+      
       res.redirect(redirectUrl);
       
     } catch (error) {
       console.error('❌ Google OAuth callback error:', error);
-      res.redirect('/login?error=oauth_processing_failed');
+      console.error('❌ Error stack:', error.stack);
+      res.status(500).json({ 
+        error: 'An error occurred while processing your request',
+        requestId: req.requestId,
+        timestamp: new Date().toISOString()
+      });
     }
   }
 );
