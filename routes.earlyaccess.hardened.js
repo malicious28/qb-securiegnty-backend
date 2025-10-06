@@ -1,6 +1,6 @@
 // HARDENED EARLY ACCESS ROUTES - ENTERPRISE SECURITY
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
+const { getPrismaClient } = require('./utils/prisma');
 const { body, validationResult } = require('express-validator');
 const rateLimit = require('express-rate-limit');
 const xss = require('xss');
@@ -8,17 +8,8 @@ const validator = require('validator');
 const emailService = require('./utils/emailService');
 const router = express.Router();
 
-// Initialize Prisma with enhanced error handling
-let prisma;
-try {
-  prisma = new PrismaClient({
-    log: ['error'],
-    errorFormat: 'minimal'
-  });
-} catch (error) {
-  console.error('❌ Failed to initialize Prisma:', error);
-  throw new Error('Database initialization failed');
-}
+// Use shared Prisma client
+const prisma = getPrismaClient();
 
 // ============================================
 // AGGRESSIVE RATE LIMITING FOR PUBLIC ENDPOINT

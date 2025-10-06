@@ -6,11 +6,20 @@ const rateLimit = require('express-rate-limit');
 const { body, validationResult } = require('express-validator');
 const validator = require('validator');
 const xss = require('xss');
-const { PrismaClient } = require('@prisma/client');
+const { getPrismaClient } = require('./utils/prisma');
 const passport = require('passport');
-const emailService = require('./utils/emailService');
+const path = require('path');
 const router = express.Router();
-const prisma = new PrismaClient();
+const prisma = getPrismaClient();
+
+// Lazy load emailService to avoid module resolution issues
+let emailService = null;
+function getEmailService() {
+  if (!emailService) {
+    emailService = require(path.join(__dirname, 'utils', 'emailService'));
+  }
+  return emailService;
+}
 
 // ============================================
 // SECURITY MIDDLEWARE & RATE LIMITING
@@ -241,7 +250,7 @@ router.post('/register',
             email: email.toLowerCase(),
             password: hashedPassword,
             country: country?.trim() || null,
-            isVerified: process.env.NODE_ENV !== 'production', // Auto-verify in development
+            isEmailVerified: process.env.NODE_ENV !== 'production', // Auto-verify in development
             verificationToken
           }
         });
@@ -268,7 +277,7 @@ router.post('/register',
       // Send welcome email asynchronously (don't block response)
       setImmediate(async () => {
         try {
-          await emailService.sendWelcomeEmail(email, `${firstName} ${lastName}`);
+          await getEmailService().sendWelcomeEmail(email, `${firstName} ${lastName}`);
           console.log(`📧 EMAIL SENT: Welcome email delivered to ${email}`);
         } catch (emailError) {
           console.error(`⚠️ EMAIL FAILED: Could not send welcome email to ${email}:`, emailError.message);
@@ -343,7 +352,7 @@ router.post('/login',
       }
 
       // Check if account is verified (skip in development)
-      if (!user.isVerified && process.env.NODE_ENV === 'production') {
+      if (!user.isEmailVerified && process.env.NODE_ENV === 'production') {
         return res.status(403).json({ 
           error: 'Please verify your email address before logging in',
           code: 'EMAIL_NOT_VERIFIED'
@@ -399,7 +408,7 @@ router.post('/login',
           lastName: user.lastName,
           email: user.email,
           country: user.country,
-          isVerified: user.isVerified
+          isEmailVerified: user.isEmailVerified
         },
         expiresIn: JWT_CONFIG.accessTokenExpiry,
         code: 'LOGIN_SUCCESS'
@@ -481,7 +490,7 @@ router.get('/verify-email', async (req, res) => {
       });
     }
 
-    if (user.isVerified) {
+    if (user.isEmailVerified) {
       return res.status(400).json({ 
         error: 'Email is already verified',
         code: 'ALREADY_VERIFIED'
@@ -492,7 +501,7 @@ router.get('/verify-email', async (req, res) => {
     await prisma.user.update({
       where: { email: decoded.email },
       data: { 
-        isVerified: true, 
+        isEmailVerified: true, 
         verificationToken: null 
       }
     });
@@ -632,7 +641,7 @@ router.get('/google/callback',
   }),
   async (req, res) => {
     try {
-      console.log("OAuth callback hit with code:", req.query.code);
+      console.log('🎉 Google OAuth callback hit');
       console.log('User object:', req.user ? 'Present' : 'Missing');
       
       if (!req.user) {

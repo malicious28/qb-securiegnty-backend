@@ -1,11 +1,11 @@
 // Password reset endpoints for authentication
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
+const { getPrismaClient } = require('./utils/prisma');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const emailService = require('./utils/emailService');
 const router = express.Router();
-const prisma = new PrismaClient();
+const prisma = getPrismaClient();
 
 const { authenticateToken } = require('./routes.auth.hardened');
 
