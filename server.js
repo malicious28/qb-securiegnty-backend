@@ -372,6 +372,19 @@ app.get('/wake-up', (req, res) => {
   });
 });
 
+// Debug OAuth configuration endpoint
+app.get('/debug/oauth-config', (req, res) => {
+  res.json({
+    googleClientIdSet: !!process.env.GOOGLE_CLIENT_ID,
+    googleClientSecretSet: !!process.env.GOOGLE_CLIENT_SECRET,
+    googleCallbackUrlSet: !!process.env.GOOGLE_CALLBACK_URL,
+    sessionSecretSet: !!(process.env.SESSION_SECRET_VALUE || process.env.SESSION_SECRET),
+    frontendUrlSet: !!process.env.FRONTEND_URL,
+    nodeEnv: process.env.NODE_ENV || 'development',
+    port: process.env.PORT || 5000
+  });
+});
+
 // ============================================
 // ULTRA-SECURE HEALTH CHECK
 // ============================================
