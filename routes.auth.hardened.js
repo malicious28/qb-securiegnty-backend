@@ -632,7 +632,7 @@ router.get('/google/callback',
   }),
   async (req, res) => {
     try {
-      console.log('🎉 Google OAuth callback hit');
+      console.log("OAuth callback hit with code:", req.query.code);
       console.log('User object:', req.user ? 'Present' : 'Missing');
       
       if (!req.user) {
