@@ -1,8 +1,6 @@
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+const prisma = require('../utils/prisma');
 
 // Use PORT from environment or default to 5000
 const PORT = process.env.PORT || 5000;
