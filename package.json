@@ -10,8 +10,8 @@
     "start": "node server.js",
     "start-test": "node server-test.js",
     "dev": "node server.js",
-    "build": "npm install --production --no-optional",
-    "postinstall": "echo 'Dependencies installed successfully'",
+    "build": "npm ci --production",
+    "postinstall": "prisma generate",
     "clean": "rm -rf node_modules package-lock.json",
     "test": "jest"
   },
@@ -29,6 +29,7 @@
     "express": "^4.21.0",
     "express-mongo-sanitize": "^2.2.0",
     "express-rate-limit": "^7.5.1",
+    "express-session": "^1.18.2",
     "express-validator": "^7.2.1",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
