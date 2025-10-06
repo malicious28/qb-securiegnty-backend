@@ -7,6 +7,7 @@ const { body, validationResult } = require('express-validator');
 const validator = require('validator');
 const xss = require('xss');
 const { PrismaClient } = require('@prisma/client');
+const passport = require('passport');
 const emailService = require('./utils/emailService');
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -599,6 +600,69 @@ router.get('/protected', authenticateToken, (req, res) => {
 });
 
 // ============================================
+// GOOGLE OAUTH ROUTES
+// ============================================
+
+// Initiate Google OAuth
+router.get('/google', 
+  authLimiter,
+  (req, res, next) => {
+    const callbackURL = process.env.GOOGLE_CALLBACK_URL || 
+      (process.env.NODE_ENV === 'production' 
+        ? 'https://qb-securiegnty-backend.onrender.com/api/auth/google/callback'
+        : `http://localhost:${process.env.PORT || 5000}/api/auth/google/callback`);
+    
+    console.log('🔐 Initiating Google OAuth with callback:', callbackURL);
+    
+    passport.authenticate('google', { 
+      scope: ['profile', 'email'],
+      callbackURL: callbackURL
+    })(req, res, next);
+  }
+);
+
+// Google OAuth callback
+router.get('/google/callback',
+  authLimiter,
+  passport.authenticate('google', { failureRedirect: '/login?error=oauth_failed' }),
+  async (req, res) => {
+    try {
+      console.log('🎉 Google OAuth successful for user:', req.user.email);
+      
+      // Generate JWT token for the user
+      const tokenPayload = {
+        userId: req.user.id,
+        email: req.user.email,
+        isEmailVerified: req.user.isEmailVerified
+      };
+      
+      const accessToken = jwt.sign(tokenPayload, JWT_CONFIG.secret, {
+        expiresIn: JWT_CONFIG.accessTokenExpiry
+      });
+      
+      const refreshToken = jwt.sign(
+        { userId: req.user.id, type: 'refresh' },
+        JWT_CONFIG.secret,
+        { expiresIn: JWT_CONFIG.refreshTokenExpiry }
+      );
+
+      // Log successful OAuth login
+      console.log(`✅ Google OAuth login successful for ${req.user.email} from IP ${req.ip}`);
+      
+      // Redirect to frontend with tokens
+      const frontendUrl = process.env.FRONTEND_URL || 'https://qbsecuriegnty.com';
+      const redirectUrl = `${frontendUrl}/social-login-success?token=${accessToken}&refresh=${refreshToken}`;
+      
+      res.redirect(redirectUrl);
+      
+    } catch (error) {
+      console.error('❌ Google OAuth callback error:', error);
+      res.redirect('/login?error=oauth_processing_failed');
+    }
+  }
+);
+
+// ============================================
 // SECURITY MONITORING ENDPOINT
 // ============================================
 
@@ -610,7 +674,8 @@ router.get('/security-status', (req, res) => {
       jwtSecurity: 'Enhanced',
       inputValidation: 'Comprehensive',
       emailVerification: 'Required',
-      tokenRevocation: 'Active'
+      tokenRevocation: 'Active',
+      googleOAuth: 'Active'
     },
     status: 'Hardened',
     securityLevel: 'HIGH',

@@ -187,6 +187,9 @@ app.use(express.urlencoded({
   parameterLimit: 20 // Limit number of parameters
 }));
 
+// Serve static files from public directory
+app.use(express.static(path.join(__dirname, 'public')));
+
 // Enhanced request logging
 app.use(morgan('combined', {
   skip: (req, res) => {
@@ -296,6 +299,33 @@ app.get('/api/status', (req, res) => {
     message: 'API is operational'
   });
 });
+
+// ============================================
+// SESSION & PASSPORT CONFIGURATION
+// ============================================
+
+const session = require('express-session');
+const passport = require('./config/passport');
+
+// Session configuration
+app.use(session({
+  secret: process.env.SESSION_SECRET_VALUE || process.env.SESSION_SECRET || 'your-super-secret-session-key-change-in-production',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+    httpOnly: true, // Prevent XSS
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' // Allow cross-site cookies in production
+  },
+  name: 'qb.session' // Custom session name for security
+}));
+
+// Initialize Passport
+app.use(passport.initialize());
+app.use(passport.session());
+
+console.log('🔐 Passport and session middleware initialized');
 
 // ============================================
 // LOAD HARDENED ROUTES
