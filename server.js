@@ -307,18 +307,21 @@ app.get('/api/status', (req, res) => {
 const session = require('express-session');
 const passport = require('./config/passport');
 
+// Trust proxy for Render deployment
+app.set('trust proxy', 1);
+
 // Session configuration
 app.use(session({
   secret: process.env.SESSION_SECRET_VALUE || process.env.SESSION_SECRET || 'your-super-secret-session-key-change-in-production',
   resave: false,
-  saveUninitialized: false,
-  proxy: true, // Trust proxy for Render
+  saveUninitialized: true, // Changed to true for OAuth
+  proxy: true, // Trust proxy for secure cookies
   cookie: {
     secure: process.env.NODE_ENV === 'production', // HTTPS only in production
     httpOnly: true, // Prevent XSS
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Allow cross-site cookies in production
-    domain: process.env.NODE_ENV === 'production' ? '.onrender.com' : undefined // Set domain for Render
+    sameSite: 'lax', // Changed from 'none' to 'lax' for better OAuth compatibility
+    domain: process.env.NODE_ENV === 'production' ? '.onrender.com' : undefined
   },
   name: 'qb.session' // Custom session name for security
 }));
