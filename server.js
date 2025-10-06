@@ -312,11 +312,13 @@ app.use(session({
   secret: process.env.SESSION_SECRET_VALUE || process.env.SESSION_SECRET || 'your-super-secret-session-key-change-in-production',
   resave: false,
   saveUninitialized: false,
+  proxy: true, // Trust proxy for Render
   cookie: {
     secure: process.env.NODE_ENV === 'production', // HTTPS only in production
     httpOnly: true, // Prevent XSS
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' // Allow cross-site cookies in production
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Allow cross-site cookies in production
+    domain: process.env.NODE_ENV === 'production' ? '.onrender.com' : undefined // Set domain for Render
   },
   name: 'qb.session' // Custom session name for security
 }));
