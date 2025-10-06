@@ -23,11 +23,16 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// ⚡ CRITICAL: Trust proxy MUST be set BEFORE any middleware
+// Render uses a proxy, rate limiters need this to work properly
+app.set('trust proxy', 1);
+
 console.log('🛡️ STARTING ULTRA-SECURE QB SECURIEGNTY BACKEND');
 console.log('📍 Port:', PORT);
 console.log('🌍 Environment:', process.env.NODE_ENV || 'development');
 console.log('🕐 Started at:', new Date().toISOString());
 console.log('🔒 Security Level:', process.env.NODE_ENV === 'production' ? 'MAXIMUM' : 'DEVELOPMENT');
+console.log('✅ Proxy trust enabled for Render deployment');
 if (process.env.NODE_ENV !== 'production') {
   console.log('⚠️ DEVELOPMENT MODE: Rate limiting is relaxed for testing');
 }
@@ -307,21 +312,18 @@ app.get('/api/status', (req, res) => {
 const session = require('express-session');
 const passport = require('./config/passport');
 
-// Trust proxy for Render deployment
-app.set('trust proxy', 1);
-
-// Session configuration
+// Session configuration (trust proxy already set at top of file)
 app.use(session({
   secret: process.env.SESSION_SECRET_VALUE || process.env.SESSION_SECRET || 'your-super-secret-session-key-change-in-production',
   resave: false,
-  saveUninitialized: true, // Changed to true for OAuth
-  proxy: true, // Trust proxy for secure cookies
+  saveUninitialized: true, // Required for OAuth flow
+  proxy: true, // Trust proxy for secure cookies (Render)
   cookie: {
     secure: process.env.NODE_ENV === 'production', // HTTPS only in production
     httpOnly: true, // Prevent XSS
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: 'lax', // Changed from 'none' to 'lax' for better OAuth compatibility
-    domain: process.env.NODE_ENV === 'production' ? '.onrender.com' : undefined
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' required for cross-site OAuth
+    domain: undefined // Let browser handle domain automatically
   },
   name: 'qb.session' // Custom session name for security
 }));
