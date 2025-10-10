@@ -11,7 +11,7 @@
     "start-test": "node server-test.js",
     "dev": "node server.js",
     "build": "npm ci --production && npx prisma generate",
-    "postinstall": "echo 'Dependencies installed'",
+    "postinstall": "npx prisma generate",
     "clean": "rm -rf node_modules package-lock.json",
     "test": "jest"
   },
