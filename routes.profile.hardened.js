@@ -109,7 +109,7 @@ router.get('/me', profileLimiter, authenticateToken, async (req, res) => {
         lastName: true,
         email: true,
         country: true,
-        isVerified: true,
+        isEmailVerified: true,
         createdAt: true,
         updatedAt: true
         // SECURITY: Explicitly exclude password and sensitive fields
@@ -184,7 +184,7 @@ router.put('/me',
       // Handle email change (requires re-verification)
       if (email !== undefined && email !== existingUser.email) {
         updateData.email = email.toLowerCase();
-        updateData.isVerified = false; // Require re-verification for email change
+        updateData.isEmailVerified = false; // Require re-verification for email change
         // TODO: Send new verification email
         console.log(`✅ SECURITY: Email change requested for user ${req.user.userId}: ${existingUser.email} -> ${email}`);
       }
@@ -199,7 +199,7 @@ router.put('/me',
           lastName: true,
           email: true,
           country: true,
-          isVerified: true,
+          isEmailVerified: true,
           createdAt: true,
           updatedAt: true
         }
@@ -317,21 +317,21 @@ router.get('/security-status', authenticateToken, async (req, res) => {
     const user = await prisma.user.findUnique({
       where: { id: req.user.userId },
       select: {
-        isVerified: true,
+        isEmailVerified: true,
         createdAt: true,
         updatedAt: true
       }
     });
 
     const securityStatus = {
-      emailVerified: user?.isVerified || false,
+      emailVerified: user?.isEmailVerified || false,
       accountAge: user?.createdAt ? Math.floor((new Date() - new Date(user.createdAt)) / (1000 * 60 * 60 * 24)) : 0,
       lastUpdate: user?.updatedAt,
-      securityLevel: user?.isVerified ? 'VERIFIED' : 'UNVERIFIED',
+      securityLevel: user?.isEmailVerified ? 'VERIFIED' : 'UNVERIFIED',
       recommendations: []
     };
 
-    if (!user?.isVerified) {
+    if (!user?.isEmailVerified) {
       securityStatus.recommendations.push('Verify your email address for enhanced security');
     }
 

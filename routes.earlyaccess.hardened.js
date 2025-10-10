@@ -301,10 +301,10 @@ router.get('/',
       // Additional admin verification (check if user has admin privileges)
       const user = await prisma.user.findUnique({
         where: { id: req.user.userId },
-        select: { email: true, isVerified: true }
+        select: { email: true, isEmailVerified: true }
       });
 
-      if (!user || !user.isVerified) {
+      if (!user || !user.isEmailVerified) {
         console.log(`🚨 SECURITY: Unauthorized early access admin attempt by user ${req.user.userId} from IP ${req.ip}`);
         return res.status(403).json({
           error: 'Insufficient privileges',
