@@ -8,36 +8,38 @@ datasource db {
 }
 
 model User {
-  id                Int           @id @default(autoincrement())
-  email             String        @unique
+  id                Int             @id @default(autoincrement())
+  email             String          @unique
   password          String?
-  createdAt         DateTime      @default(now())
+  createdAt         DateTime        @default(now())
   country           String?
   firstName         String?
   lastName          String?
   verificationToken String?
-  updatedAt         DateTime?     @default(now()) @updatedAt
-  googleId          String?       @unique
-  isEmailVerified   Boolean       @default(false)
+  updatedAt         DateTime?       @default(now()) @updatedAt
+  googleId          String?         @unique
+  isEmailVerified   Boolean         @default(false)
   lastLoginAt       DateTime?
   
-  // Define relationship to Appointments
+  // Define relationships
   appointments      Appointment[]
+  meetingDetails    MeetingDetails[]
 }
 
 model Appointment {
-  id              Int      @id @default(autoincrement())
+  id              Int             @id @default(autoincrement())
   name            String
   email           String
   phone           String?
   message         String?
   appointmentDate DateTime?
-  appointmentType String?  @default("general")
+  appointmentType String?         @default("general")
   userId          Int?
-  createdAt       DateTime @default(now())
+  createdAt       DateTime        @default(now())
   
-  // Define relationship to User
-  user            User?    @relation(fields: [userId], references: [id])
+  // Define relationships
+  user            User?           @relation(fields: [userId], references: [id])
+  meetingDetails  MeetingDetails?
 }
 
 model EarlyAccess {
@@ -46,4 +48,30 @@ model EarlyAccess {
   email      String
   occupation String?
   createdAt  DateTime @default(now())
+}
+
+model MeetingDetails {
+  id              Int      @id @default(autoincrement())
+  appointmentId   Int?     @unique
+  name            String
+  email           String
+  phone           String?
+  company         String?
+  position        String?
+  meetingDate     DateTime?
+  meetingTime     String?
+  duration        String?  @default("30 minutes")
+  location        String?  @default("virtual")
+  agenda          String?
+  requirements    String?
+  notes           String?
+  status          String?  @default("pending")
+  userId          Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Define relationship to User
+  user            User?        @relation(fields: [userId], references: [id])
+  // Define relationship to Appointment
+  appointment     Appointment? @relation(fields: [appointmentId], references: [id])
 }
