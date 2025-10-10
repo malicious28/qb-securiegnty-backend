@@ -146,7 +146,7 @@ router.post('/',
       // Verify authenticated user
       const user = await prisma.user.findUnique({
         where: { id: req.user.userId },
-        select: { email: true, isEmailVerified: true, firstName: true, lastName: true }
+        select: { email: true, isVerified: true, firstName: true, lastName: true }
       });
 
       if (!user) {
@@ -157,7 +157,7 @@ router.post('/',
         });
       }
 
-      if (!user.isEmailVerified) {
+      if (!user.isVerified) {
         return res.status(403).json({
           error: 'Please verify your email address before booking appointments',
           requestId,

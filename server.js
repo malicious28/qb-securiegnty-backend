@@ -344,7 +344,6 @@ const secureRoutes = [
   { path: './routes.auth.hardened', mount: '/api/auth', name: 'Authentication (Hardened)' },
   { path: './routes.profile.hardened', mount: '/api/profile', name: 'Profile (Hardened)' },
   { path: './routes.appointment.hardened', mount: '/api/appointments', name: 'Appointments (Hardened)' },
-  { path: './routes.meeting-details.hardened', mount: '/api/meeting-details', name: 'Meeting Details (Hardened)' },
   { path: './routes.earlyaccess.hardened', mount: '/api/early-access', name: 'Early Access (Hardened)' }
 ];
 
@@ -503,7 +502,6 @@ app.get('/', (req, res) => {
         auth: '/api/auth/*',
         profile: '/api/profile/*',
         appointments: '/api/appointments/*',
-        meetingDetails: '/api/meeting-details/*',
         earlyAccess: '/api/early-access'
       }
     },

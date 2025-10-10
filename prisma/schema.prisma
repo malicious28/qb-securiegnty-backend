@@ -20,8 +20,6 @@ model User {
   googleId          String?         @unique
   isEmailVerified   Boolean         @default(false)
   lastLoginAt       DateTime?
-  
-  // Define relationships
   appointments      Appointment[]
   meetingDetails    MeetingDetails[]
 }
@@ -35,11 +33,32 @@ model Appointment {
   appointmentDate DateTime?
   appointmentType String?         @default("general")
   userId          Int?
-  createdAt       DateTime        @default(now())
-  
-  // Define relationships
-  user            User?           @relation(fields: [userId], references: [id])
+  user            User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
   meetingDetails  MeetingDetails?
+  createdAt       DateTime        @default(now())
+}
+
+model MeetingDetails {
+  id            Int          @id @default(autoincrement())
+  appointmentId Int?         @unique
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  name          String
+  email         String
+  phone         String?
+  company       String?
+  position      String?
+  meetingDate   DateTime?
+  meetingTime   String?
+  duration      String?      @default("30 minutes")
+  location      String?      @default("virtual")
+  agenda        String?
+  requirements  String?
+  notes         String?
+  status        String?      @default("pending")
+  userId        Int?
+  user          User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 }
 
 model EarlyAccess {
@@ -48,30 +67,4 @@ model EarlyAccess {
   email      String
   occupation String?
   createdAt  DateTime @default(now())
-}
-
-model MeetingDetails {
-  id              Int      @id @default(autoincrement())
-  appointmentId   Int?     @unique
-  name            String
-  email           String
-  phone           String?
-  company         String?
-  position        String?
-  meetingDate     DateTime?
-  meetingTime     String?
-  duration        String?  @default("30 minutes")
-  location        String?  @default("virtual")
-  agenda          String?
-  requirements    String?
-  notes           String?
-  status          String?  @default("pending")
-  userId          Int?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  // Define relationship to User
-  user            User?        @relation(fields: [userId], references: [id])
-  // Define relationship to Appointment
-  appointment     Appointment? @relation(fields: [appointmentId], references: [id])
 }
