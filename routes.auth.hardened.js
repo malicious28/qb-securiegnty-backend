@@ -16,7 +16,7 @@ const prisma = getPrismaClient();
 let emailService = null;
 function getEmailService() {
   if (!emailService) {
-    emailService = require(path.join(__dirname, 'utils', 'emailService'));
+    emailService = require('./utils/emailService');
   }
   return emailService;
 }

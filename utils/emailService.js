@@ -1,82 +1,109 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
 class EmailService {
     constructor() {
-        this.transporter = null;
+        this.resend = null;
         this.isConfigured = false;
-        this.setupTransporter();
+        this.setupResend();
     }
 
-    setupTransporter() {
+    setupResend() {
         try {
-            // Check if email credentials are available
-            if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-                console.log('⚠️ Email credentials not found in environment variables');
+            console.log('🔄 Setting up Resend email service...');
+            console.log('🔍 Checking RESEND_API_KEY:', process.env.RESEND_API_KEY ? 'Present' : 'Missing');
+            
+            // Check if Resend API key is available
+            if (!process.env.RESEND_API_KEY) {
+                console.log('⚠️ RESEND_API_KEY not found in environment variables');
+                console.log('📋 Available env variables:', Object.keys(process.env).filter(key => key.includes('RESEND')));
                 return;
             }
 
-            // Create transporter with multiple fallback options
-            this.transporter = nodemailer.createTransport({
-                service: 'gmail',
-                auth: {
-                    user: process.env.EMAIL_USER,
-                    pass: process.env.EMAIL_PASS,
-                },
-                tls: {
-                    rejectUnauthorized: false
-                },
-                timeout: 10000, // 10 seconds timeout
-                connectionTimeout: 10000,
-                greetingTimeout: 5000,
-                socketTimeout: 10000
-            });
-
+            // Initialize Resend with API key
+            this.resend = new Resend(process.env.RESEND_API_KEY);
             this.isConfigured = true;
-            console.log('✅ Email service configured successfully');
+            console.log('✅ Resend email service configured successfully');
             
-            // Test the connection
-            this.testConnection();
         } catch (error) {
-            console.error('❌ Email service configuration failed:', error.message);
+            console.error('❌ Resend email service configuration failed:', error.message);
+            console.error('📋 Error stack:', error.stack);
             this.isConfigured = false;
         }
     }
 
     async testConnection() {
-        if (!this.transporter) {
-            console.log('⚠️ Email transporter not configured');
+        if (!this.resend) {
+            console.log('⚠️ Resend not configured');
             return false;
         }
 
         try {
-            await this.transporter.verify();
-            console.log('✅ Email connection verified successfully');
+            // Resend doesn't have a verify method like nodemailer, 
+            // so we'll just check if the service is configured
+            console.log('✅ Resend email service ready');
             return true;
         } catch (error) {
-            console.error('❌ Email connection test failed:', error.message);
-            console.error('💡 Check your EMAIL_USER and EMAIL_PASS in .env file');
-            console.error('💡 Make sure you are using an App Password for Gmail');
+            console.error('❌ Resend connection test failed:', error.message);
+            console.error('💡 Check your RESEND_API_KEY in .env file');
             this.isConfigured = false;
             return false;
         }
     }
 
     async sendEmail(mailOptions) {
-        if (!this.isConfigured || !this.transporter) {
-            console.error('❌ Email service not configured');
+        console.log('📧 sendEmail called with isConfigured:', this.isConfigured);
+        console.log('📧 Resend instance:', this.resend ? 'Present' : 'Missing');
+        
+        if (!this.isConfigured || !this.resend) {
+            console.error('❌ Resend email service not configured');
+            console.error('📋 Debug info:', { 
+                isConfigured: this.isConfigured, 
+                hasResend: !!this.resend,
+                hasApiKey: !!process.env.RESEND_API_KEY 
+            });
             throw new Error('Email service not available');
         }
 
         try {
             console.log(`📧 Sending email to: ${mailOptions.to}`);
-            const result = await this.transporter.sendMail({
-                from: `QB Securiegnty <${process.env.EMAIL_USER}>`,
-                ...mailOptions
+            
+            // Primary sender: Custom domain (once verified)
+            // Fallback: Resend default domain
+            const senderEmail = process.env.SENDER_EMAIL || 'admin@qbsecuriegnty.com';
+            const fallbackSender = 'QB Securiegnty <onboarding@resend.dev>';
+            
+            let fromAddress = `QB Securiegnty Admin <${senderEmail}>`;
+            
+            const result = await this.resend.emails.send({
+                from: fromAddress,
+                to: mailOptions.to,
+                subject: mailOptions.subject,
+                html: mailOptions.html
             });
-            console.log('✅ Email sent successfully:', result.messageId);
+            console.log('✅ Email sent successfully:', result.data?.id || 'sent');
+            console.log(`📤 Sent from: ${fromAddress}`);
             return result;
         } catch (error) {
             console.error('❌ Failed to send email:', error.message);
+            
+            // If custom domain fails, try fallback (for unverified domains)
+            if (error.message.includes('domain') || error.message.includes('verify')) {
+                console.log('🔄 Trying fallback sender...');
+                try {
+                    const result = await this.resend.emails.send({
+                        from: 'QB Securiegnty <onboarding@resend.dev>',
+                        to: mailOptions.to,
+                        subject: mailOptions.subject,
+                        html: mailOptions.html
+                    });
+                    console.log('✅ Email sent via fallback:', result.data?.id || 'sent');
+                    console.log('⚠️ Note: Using fallback sender. Verify your domain in Resend dashboard.');
+                    return result;
+                } catch (fallbackError) {
+                    console.error('❌ Fallback also failed:', fallbackError.message);
+                    throw fallbackError;
+                }
+            }
             throw error;
         }
     }
