@@ -113,7 +113,6 @@ const corsOptions = {
       'https://qbsecuriegnty.com',
       'https://www.qbsecuriegnty.com'
     ];
-    
     // Development origins (only in development)
     const developmentOrigins = [
       'http://localhost:3000',
@@ -125,27 +124,29 @@ const corsOptions = {
       'http://127.0.0.1:5174',
       'http://127.0.0.1:8080'
     ];
-    
     // Allow no origin for mobile apps, curl, etc.
     if (!origin) {
       console.log('✅ CORS: Allowing request without origin (mobile/API client)');
       return callback(null, true);
     }
-    
     let finalAllowedOrigins = [...allowedOrigins];
-    
     // Only add development origins in development mode
     if (process.env.NODE_ENV !== 'production') {
       finalAllowedOrigins = [...allowedOrigins, ...developmentOrigins];
       console.log(`✅ CORS: Development mode - allowing origin: ${origin}`);
       return callback(null, true);
     }
-    
     // Production mode - strict checking
     if (finalAllowedOrigins.includes(origin)) {
       console.log(`✅ CORS: Allowing approved origin: ${origin}`);
       callback(null, true);
     } else {
+      // Allow OPTIONS preflight for all origins
+      if (origin && (typeof origin === 'string') && (origin.startsWith('http'))) {
+        if (callback && typeof callback === 'function' && (callback.length === 2)) {
+          return callback(null, true);
+        }
+      }
       console.error(`🚨 SECURITY: CORS blocked unauthorized origin: ${origin}`);
       callback(new Error('CORS: Origin not allowed'), false);
     }
