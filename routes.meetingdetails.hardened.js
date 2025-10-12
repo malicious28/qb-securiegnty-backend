@@ -46,7 +46,23 @@ router.post('/confirm', meetingDetailsLimiter, meetingDetailsValidation, async (
         problem
       }
     });
-    // Optionally send confirmation email here
+
+    // Send confirmation email to user
+    try {
+      const emailService = require('./utils/emailService');
+      await emailService.sendAppointmentConfirmationEmail({
+        to: email,
+        name: email, // You can pass name if available
+        date,
+        phone: whatsappNumber,
+        message: problem
+      });
+      console.log(`📧 Meeting details confirmation email sent to ${email}`);
+    } catch (emailError) {
+      console.error(`⚠️ EMAIL: Failed to send meeting details confirmation to ${email}:`, emailError.message);
+      // Don't fail the response if email fails
+    }
+
     res.status(201).json({ message: 'Meeting details submitted successfully!', meeting, requestId });
   } catch (error) {
     console.error(`❌ Meeting details error for request ${requestId}:`, error);
