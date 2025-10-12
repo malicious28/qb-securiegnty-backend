@@ -345,6 +345,7 @@ const secureRoutes = [
   { path: './routes.profile.hardened', mount: '/api/profile', name: 'Profile (Hardened)' },
   { path: './routes.appointment.hardened', mount: '/api/appointments', name: 'Appointments (Hardened)' },
   { path: './routes.earlyaccess.hardened', mount: '/api/early-access', name: 'Early Access (Hardened)' },
+  { path: './routes.meetingdetails.hardened', mount: '/api/meeting-details', name: 'Meeting Details (Hardened)' },
   { path: './routes.reset', mount: '/api/auth', name: 'Password Reset' }
 ];
 

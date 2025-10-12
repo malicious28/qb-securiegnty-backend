@@ -39,26 +39,17 @@ model Appointment {
 }
 
 model MeetingDetails {
-  id            Int          @id @default(autoincrement())
-  appointmentId Int?         @unique
-  appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
-  name          String
-  email         String
-  phone         String?
-  company       String?
-  position      String?
-  meetingDate   DateTime?
-  meetingTime   String?
-  duration      String?      @default("30 minutes")
-  location      String?      @default("virtual")
-  agenda        String?
-  requirements  String?
-  notes         String?
-  status        String?      @default("pending")
-  userId        Int?
-  user          User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  id             Int      @id @default(autoincrement())
+  email          String
+  date           String
+  time           String
+  whatsappNumber String?
+  problem        String?
+  userId         Int?
+  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  appointmentId  Int?   @unique
+  appointment    Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  createdAt      DateTime @default(now())
 }
 
 model EarlyAccess {
