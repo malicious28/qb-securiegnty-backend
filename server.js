@@ -395,6 +395,53 @@ app.get('/debug/oauth-config', (req, res) => {
   });
 });
 
+// Debug database connection endpoint
+app.get('/debug/database', async (req, res) => {
+  const requestId = req.requestId || 'unknown';
+  
+  try {
+    // Redacted connection string for security
+    const dbUrl = process.env.DATABASE_URL || 'not-set';
+    const redactedUrl = dbUrl.replace(/:([^:@]+)@/, ':***@'); // Hide password
+    
+    let connectionTest = 'not-tested';
+    let connectionLatency = null;
+    
+    if (prisma) {
+      const startTime = Date.now();
+      try {
+        await prisma.$queryRaw`SELECT 1 as test`;
+        connectionLatency = Date.now() - startTime;
+        connectionTest = 'success';
+      } catch (err) {
+        connectionTest = `failed: ${err.message}`;
+      }
+    }
+    
+    res.json({
+      requestId,
+      timestamp: new Date().toISOString(),
+      database: {
+        url: redactedUrl,
+        status: dbStatus,
+        prismaClient: !!prisma,
+        connectionTest,
+        latency: connectionLatency
+      },
+      environment: process.env.NODE_ENV || 'development',
+      tip: 'If connection fails, check if Neon database is IDLE and needs wake-up'
+    });
+    
+  } catch (error) {
+    console.error(`❌ [${requestId}] Database debug error:`, error);
+    res.status(500).json({
+      error: 'Database debug failed',
+      requestId,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // ============================================
 // ULTRA-SECURE HEALTH CHECK
 // ============================================
