@@ -109,7 +109,6 @@ const corsOptions = {
   origin: function(origin, callback) {
     // Production whitelist
     const allowedOrigins = [
-      'https://qb-securiegnty.netlify.app',
       'https://qbsecuriegnty.com',
       'https://www.qbsecuriegnty.com'
     ];
