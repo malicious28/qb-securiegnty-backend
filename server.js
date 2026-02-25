@@ -580,15 +580,6 @@ async function initializeSecureServer() {
   try {
     await startSecureServer(PORT);
     
-    // Initialize keep-alive service for Render free tier
-    if (process.env.NODE_ENV === 'production' && process.env.RENDER) {
-      const KeepAliveService = require('./utils/keepalive');
-      const serverUrl = process.env.RENDER_EXTERNAL_URL || `https://qb-securiegnty-backend.onrender.com`;
-      const keepAlive = new KeepAliveService(serverUrl);
-      keepAlive.startKeepAlive();
-      console.log('🔄 Keep-alive service started for Render deployment');
-    }
-    
     // Security monitoring heartbeat
     setInterval(() => {
       const uptime = Math.round(process.uptime());
