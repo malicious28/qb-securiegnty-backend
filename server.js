@@ -302,10 +302,16 @@ app.get('/api/status', (req, res) => {
 // ============================================
 
 const session = require('express-session');
+const PgSession = require('connect-pg-simple')(session);
 const passport = require('./config/passport');
 
 // Session configuration (trust proxy already set at top of file)
 app.use(session({
+  store: new PgSession({
+    conString: process.env.DATABASE_URL,
+    tableName: 'user_sessions',
+    createTableIfMissing: true
+  }),
   secret: process.env.SESSION_SECRET_VALUE || process.env.SESSION_SECRET || 'your-super-secret-session-key-change-in-production',
   resave: false,
   saveUninitialized: true, // Required for OAuth flow
