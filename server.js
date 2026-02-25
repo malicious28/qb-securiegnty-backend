@@ -27,15 +27,7 @@ const PORT = process.env.PORT || 5000;
 // Render uses a proxy, rate limiters need this to work properly
 app.set('trust proxy', 1);
 
-console.log('🛡️ STARTING ULTRA-SECURE QB SECURIEGNTY BACKEND');
-console.log('📍 Port:', PORT);
-console.log('🌍 Environment:', process.env.NODE_ENV || 'development');
-console.log('🕐 Started at:', new Date().toISOString());
-console.log('🔒 Security Level:', process.env.NODE_ENV === 'production' ? 'MAXIMUM' : 'DEVELOPMENT');
-console.log('✅ Proxy trust enabled for Render deployment');
-if (process.env.NODE_ENV !== 'production') {
-  console.log('⚠️ DEVELOPMENT MODE: Rate limiting is relaxed for testing');
-}
+console.log(`🚀 QB Security Backend starting — port ${PORT} [${process.env.NODE_ENV || 'development'}]`);
 
 // ============================================
 // ENTERPRISE SECURITY HEADERS
@@ -341,12 +333,12 @@ console.log('🔐 Passport and session middleware initialized');
 console.log('📁 Loading ultra-secure routes...');
 
 const secureRoutes = [
-  { path: './routes.auth.hardened', mount: '/api/auth', name: 'Authentication (Hardened)' },
-  { path: './routes.profile.hardened', mount: '/api/profile', name: 'Profile (Hardened)' },
-  { path: './routes.appointment.hardened', mount: '/api/appointments', name: 'Appointments (Hardened)' },
-  { path: './routes.earlyaccess.hardened', mount: '/api/early-access', name: 'Early Access (Hardened)' },
-  { path: './routes.meetingdetails.hardened', mount: '/api/meeting-details', name: 'Meeting Details (Hardened)' },
-  { path: './routes.reset', mount: '/api/auth', name: 'Password Reset' }
+  { path: './routes/auth', mount: '/api/auth', name: 'Authentication' },
+  { path: './routes/profile', mount: '/api/profile', name: 'Profile' },
+  { path: './routes/appointments', mount: '/api/appointments', name: 'Appointments' },
+  { path: './routes/earlyaccess', mount: '/api/early-access', name: 'Early Access' },
+  { path: './routes/meetingdetails', mount: '/api/meeting-details', name: 'Meeting Details' },
+  { path: './routes/reset', mount: '/api/auth', name: 'Password Reset' }
 ];
 
 secureRoutes.forEach(({ path, mount, name }) => {
@@ -379,66 +371,6 @@ app.get('/wake-up', (req, res) => {
     uptime: Math.round(process.uptime()),
     tip: 'Use this endpoint to wake up the server if it was sleeping'
   });
-});
-
-// Debug OAuth configuration endpoint
-app.get('/debug/oauth-config', (req, res) => {
-  res.json({
-    googleClientIdSet: !!process.env.GOOGLE_CLIENT_ID,
-    googleClientSecretSet: !!process.env.GOOGLE_CLIENT_SECRET,
-    googleCallbackUrlSet: !!process.env.GOOGLE_CALLBACK_URL,
-    sessionSecretSet: !!(process.env.SESSION_SECRET_VALUE || process.env.SESSION_SECRET),
-    frontendUrlSet: !!process.env.FRONTEND_URL,
-    nodeEnv: process.env.NODE_ENV || 'development',
-    port: process.env.PORT || 5000
-  });
-});
-
-// Debug database connection endpoint
-app.get('/debug/database', async (req, res) => {
-  const requestId = req.requestId || 'unknown';
-  
-  try {
-    // Redacted connection string for security
-    const dbUrl = process.env.DATABASE_URL || 'not-set';
-    const redactedUrl = dbUrl.replace(/:([^:@]+)@/, ':***@'); // Hide password
-    
-    let connectionTest = 'not-tested';
-    let connectionLatency = null;
-    
-    if (prisma) {
-      const startTime = Date.now();
-      try {
-        await prisma.$queryRaw`SELECT 1 as test`;
-        connectionLatency = Date.now() - startTime;
-        connectionTest = 'success';
-      } catch (err) {
-        connectionTest = `failed: ${err.message}`;
-      }
-    }
-    
-    res.json({
-      requestId,
-      timestamp: new Date().toISOString(),
-      database: {
-        url: redactedUrl,
-        status: dbStatus,
-        prismaClient: !!prisma,
-        connectionTest,
-        latency: connectionLatency
-      },
-      environment: process.env.NODE_ENV || 'development',
-      tip: 'If connection fails, check if Neon database is IDLE and needs wake-up'
-    });
-    
-  } catch (error) {
-    console.error(`❌ [${requestId}] Database debug error:`, error);
-    res.status(500).json({
-      error: 'Database debug failed',
-      requestId,
-      timestamp: new Date().toISOString()
-    });
-  }
 });
 
 // ============================================
@@ -632,27 +564,9 @@ let server;
 async function startSecureServer(port = PORT) {
   return new Promise((resolve, reject) => {
     server = app.listen(port, '0.0.0.0', () => {
-      console.log('🛡️ ULTRA-SECURE SERVER STARTED SUCCESSFULLY!');
-      console.log(`✅ Server running with MAXIMUM security on: 0.0.0.0:${port}`);
-      console.log(`🔒 Security Level: ENTERPRISE-GRADE`);
-      console.log(`🌐 Access URLs:`);
-      console.log(`   - Local: http://localhost:${port}`);
-      console.log(`   - Network: http://127.0.0.1:${port}`);
+      console.log(`✅ Server started on port ${port} [${process.env.NODE_ENV || 'development'}]`);
       console.log(`🏥 Health: http://localhost:${port}/health`);
-      console.log(`🔍 Security Status: http://localhost:${port}/security-status`);
-      console.log(`🛡️ SECURITY FEATURES ACTIVE:`);
-      console.log(`   ✅ Advanced Rate Limiting`);
-      console.log(`   ✅ Enterprise JWT Security`);
-      console.log(`   ✅ Comprehensive Input Validation`);
-      console.log(`   ✅ XSS Protection`);
-      console.log(`   ✅ SQL Injection Protection`);
-      console.log(`   ✅ CSRF Protection`);
-      console.log(`   ✅ Security Headers (Helmet)`);
-      console.log(`   ✅ Audit Logging`);
-      console.log(`   ✅ Bot Detection`);
-      console.log(`   ✅ Honeypot Protection`);
-      console.log(`🔥 ZERO VULNERABILITIES GUARANTEED!`);
-      
+
       resolve(server);
     });
     

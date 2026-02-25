@@ -1,6 +1,6 @@
 // HARDENED PROFILE ROUTES - ENTERPRISE SECURITY
 const express = require('express');
-const { getPrismaClient } = require('./utils/prisma');
+const { getPrismaClient } = require('../utils/prisma');
 const { body, validationResult } = require('express-validator');
 const rateLimit = require('express-rate-limit');
 const xss = require('xss');
@@ -9,7 +9,7 @@ const router = express.Router();
 const prisma = getPrismaClient();
 
 // Import hardened authentication
-const { authenticateToken } = require('./routes.auth.hardened');
+const { authenticateToken } = require('./auth');
 
 // ============================================
 // RATE LIMITING FOR PROFILE OPERATIONS

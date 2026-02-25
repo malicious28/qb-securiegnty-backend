@@ -1,16 +1,16 @@
 // HARDENED APPOINTMENT ROUTES - ENTERPRISE SECURITY
 const express = require('express');
-const { getPrismaClient } = require('./utils/prisma');
+const { getPrismaClient } = require('../utils/prisma');
 const { body, validationResult } = require('express-validator');
 const rateLimit = require('express-rate-limit');
 const xss = require('xss');
 const validator = require('validator');
-const emailService = require('./utils/emailService');
+const emailService = require('../utils/emailService');
 const router = express.Router();
 const prisma = getPrismaClient();
 
 // Import hardened authentication
-const { authenticateToken } = require('./routes.auth.hardened');
+const { authenticateToken } = require('./auth');
 
 // ============================================
 // RATE LIMITING FOR APPOINTMENTS

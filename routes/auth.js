@@ -6,7 +6,7 @@ const rateLimit = require('express-rate-limit');
 const { body, validationResult } = require('express-validator');
 const validator = require('validator');
 const xss = require('xss');
-const { getPrismaClient } = require('./utils/prisma');
+const { getPrismaClient } = require('../utils/prisma');
 const passport = require('passport');
 const path = require('path');
 const router = express.Router();
@@ -16,7 +16,7 @@ const prisma = getPrismaClient();
 let emailService = null;
 function getEmailService() {
   if (!emailService) {
-    emailService = require('./utils/emailService');
+    emailService = require('../utils/emailService');
   }
   return emailService;
 }

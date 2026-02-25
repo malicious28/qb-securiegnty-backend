@@ -1,6 +1,6 @@
 // HARDENED MEETING DETAILS ROUTES - ENTERPRISE SECURITY
 const express = require('express');
-const { getPrismaClient } = require('./utils/prisma');
+const { getPrismaClient } = require('../utils/prisma');
 const { body, validationResult } = require('express-validator');
 const rateLimit = require('express-rate-limit');
 const xss = require('xss');
@@ -49,7 +49,7 @@ router.post('/confirm', meetingDetailsLimiter, meetingDetailsValidation, async (
 
     // Send confirmation email to user
     try {
-      const emailService = require('./utils/emailService');
+      const emailService = require('../utils/emailService');
       await emailService.sendAppointmentConfirmationEmail({
         to: email,
         name: email, // You can pass name if available

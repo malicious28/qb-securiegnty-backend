@@ -1,11 +1,11 @@
 // HARDENED EARLY ACCESS ROUTES - ENTERPRISE SECURITY
 const express = require('express');
-const { getPrismaClient } = require('./utils/prisma');
+const { getPrismaClient } = require('../utils/prisma');
 const { body, validationResult } = require('express-validator');
 const rateLimit = require('express-rate-limit');
 const xss = require('xss');
 const validator = require('validator');
-const emailService = require('./utils/emailService');
+const emailService = require('../utils/emailService');
 const router = express.Router();
 
 // Use shared Prisma client
@@ -281,7 +281,7 @@ router.post('/',
 // ============================================
 
 // Import auth for admin access
-const { authenticateToken } = require('./routes.auth.hardened');
+const { authenticateToken } = require('./auth');
 
 router.get('/', 
   adminLimiter,
