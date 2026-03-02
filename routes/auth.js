@@ -261,7 +261,7 @@ router.post('/register',
 
       // SUCCESS RESPONSE - This is what frontend expects
       const successResponse = {
-        message: 'Registration successful! Please check your email to verify your account.',
+        message: 'Registration successful! We\'ve sent a verification link to your email — please click it to activate your account.',
         userId: result.id,
         emailVerificationRequired: true,
         code: 'REGISTRATION_SUCCESS',
@@ -274,13 +274,13 @@ router.post('/register',
       console.log(`✅ REGISTRATION SUCCESS: Sending response for ${email}`, successResponse);
       res.status(201).json(successResponse);
 
-      // Send welcome email asynchronously (don't block response)
+      // Send verification email asynchronously (don't block response)
       setImmediate(async () => {
         try {
-          await getEmailService().sendWelcomeEmail(email, `${firstName} ${lastName}`);
-          console.log(`📧 EMAIL SENT: Welcome email delivered to ${email}`);
+          await getEmailService().sendVerificationEmail(email, `${firstName} ${lastName}`, result.verificationToken);
+          console.log(`📧 EMAIL SENT: Verification email delivered to ${email}`);
         } catch (emailError) {
-          console.error(`⚠️ EMAIL FAILED: Could not send welcome email to ${email}:`, emailError.message);
+          console.error(`⚠️ EMAIL FAILED: Could not send verification email to ${email}:`, emailError.message);
         }
       });
 

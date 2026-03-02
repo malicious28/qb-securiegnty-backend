@@ -37,11 +37,8 @@ router.post('/forgot-password', async (req, res) => {
 // Reset password (public, uses reset token from body)
 router.post('/reset-password', async (req, res) => {
   const { token, newPassword } = req.body;
-  console.log('RESET PASSWORD BODY:', req.body);
-  console.log('RESET PASSWORD TOKEN:', token);
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    console.log('RESET PASSWORD PAYLOAD:', payload);
     const { password } = req.body;
     const finalPassword = newPassword || password;
     if (!finalPassword) {

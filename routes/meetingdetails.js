@@ -52,7 +52,7 @@ router.post('/confirm', meetingDetailsLimiter, meetingDetailsValidation, async (
       const emailService = require('../utils/emailService');
       await emailService.sendAppointmentConfirmationEmail({
         to: email,
-        name: email, // You can pass name if available
+        name: req.body.name || email,
         date,
         phone: whatsappNumber,
         message: problem
