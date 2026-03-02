@@ -220,11 +220,16 @@ router.post('/register',
       // Use transaction to ensure data consistency
       const result = await prisma.$transaction(async (prisma) => {
         // Check if user already exists
-        const existingUser = await prisma.user.findUnique({ 
-          where: { email: email.toLowerCase() } 
+        const existingUser = await prisma.user.findUnique({
+          where: { email: email.toLowerCase() }
         });
-        
+
         if (existingUser) {
+          // If account exists but email is not verified, resend verification
+          if (!existingUser.isEmailVerified && existingUser.verificationToken) {
+            console.log(`🔄 UNVERIFIED ACCOUNT: Resending verification to ${email}`);
+            throw new Error('RESEND_VERIFICATION');
+          }
           console.log(`⚠️ EMAIL EXISTS: ${email} already registered`);
           throw new Error('EMAIL_ALREADY_EXISTS');
         }
@@ -265,10 +270,7 @@ router.post('/register',
         userId: result.id,
         emailVerificationRequired: true,
         code: 'REGISTRATION_SUCCESS',
-        success: true,
-        // Frontend compatibility fields
-        isNewSignup: true,
-        redirectTo: 'onboarding'
+        success: true
       };
 
       console.log(`✅ REGISTRATION SUCCESS: Sending response for ${email}`, successResponse);
@@ -288,9 +290,30 @@ router.post('/register',
       console.error(`🚨 REGISTRATION ERROR for ${email}:`, error.message);
       
       // Handle specific errors
+      if (error.message === 'RESEND_VERIFICATION') {
+        // Account exists but unverified — resend the verification email silently
+        setImmediate(async () => {
+          try {
+            const unverifiedUser = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+            if (unverifiedUser?.verificationToken) {
+              await getEmailService().sendVerificationEmail(email, `${firstName} ${lastName}`, unverifiedUser.verificationToken);
+              console.log(`📧 RESENT: Verification email resent to ${email}`);
+            }
+          } catch (e) {
+            console.error(`⚠️ RESEND FAILED: ${e.message}`);
+          }
+        });
+        return res.status(200).json({
+          message: 'We\'ve resent a verification link to your email. Please check your inbox and click the link to activate your account.',
+          code: 'VERIFICATION_RESENT',
+          success: true,
+          emailVerificationRequired: true
+        });
+      }
+
       if (error.message === 'EMAIL_ALREADY_EXISTS') {
-        return res.status(409).json({ 
-          error: 'Your account is already there! Please log in to continue.',
+        return res.status(409).json({
+          error: 'An account with this email already exists. Please log in.',
           code: 'EMAIL_EXISTS',
           success: false
         });
