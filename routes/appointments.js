@@ -121,18 +121,16 @@ const appointmentValidation = [
 // SECURE APPOINTMENT BOOKING ENDPOINT
 // ============================================
 
-router.post('/', 
+router.post('/',
   appointmentLimiter,
-  authenticateToken, // Require authentication
   appointmentValidation,
   async (req, res) => {
     const requestId = Math.random().toString(36).substr(2, 9);
-    
+
     try {
       // Check validation errors
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
-        console.log(`❌ SECURITY: Appointment validation failed for request ${requestId}:`, errors.array());
         return res.status(400).json({
           error: 'Validation failed',
           details: errors.array(),
@@ -143,21 +141,7 @@ router.post('/',
 
       const { name, email, phone, message, appointmentDate, appointmentType } = req.body;
 
-      // Verify authenticated user
-      const user = await prisma.user.findUnique({
-        where: { id: req.user.userId },
-        select: { email: true, isEmailVerified: true, firstName: true, lastName: true }
-      });
-
-      if (!user) {
-        return res.status(404).json({
-          error: 'User account not found',
-          requestId,
-          code: 'USER_NOT_FOUND'
-        });
-      }
-
-      // Check for duplicate appointments (same user, same day)
+      // Check for duplicate appointments (same email, same day)
       if (appointmentDate) {
         const appointmentDay = new Date(appointmentDate);
         appointmentDay.setHours(0, 0, 0, 0);
@@ -167,7 +151,7 @@ router.post('/',
         const existingAppointment = await prisma.appointment.findFirst({
           where: {
             email: email.toLowerCase(),
-            createdAt: {
+            appointmentDate: {
               gte: appointmentDay,
               lt: nextDay
             }
@@ -176,7 +160,7 @@ router.post('/',
 
         if (existingAppointment) {
           return res.status(409).json({
-            error: 'You already have an appointment booked for this date',
+            error: 'An appointment is already booked for this email on that date',
             requestId,
             code: 'DUPLICATE_APPOINTMENT'
           });
@@ -191,19 +175,16 @@ router.post('/',
         message: message ? xss(message.trim()) : null,
         appointmentDate: appointmentDate ? new Date(appointmentDate) : null,
         appointmentType: appointmentType || 'general',
-        userId: req.user.userId // Link to authenticated user
+        userId: null // public booking — no auth required
       };
 
-      console.log(`💾 SECURITY: Creating appointment ${requestId} for user ${user.email} from IP ${req.ip}`);
+      console.log(`💾 Appointment ${requestId} from IP ${req.ip}`);
 
       const appointment = await prisma.appointment.create({
         data: appointmentData
       });
 
-      console.log(`✅ SECURITY: Appointment ${requestId} created successfully with ID: ${appointment.id}`);
-
-      // Security audit log
-      console.log(`📊 AUDIT: Appointment booking - ID: ${appointment.id}, User: ${user.email}, IP: ${req.ip}, Type: ${appointmentType || 'general'}`);
+      console.log(`✅ Appointment ${requestId} created: ID ${appointment.id} for ${email}`);
 
       // Send confirmation email securely
       try {
@@ -214,7 +195,7 @@ router.post('/',
           phone: phone,
           message: message
         });
-        console.log(`📧 SECURITY: Appointment confirmation email sent to ${email} for appointment ${appointment.id}`);
+        console.log(`📧 Appointment confirmation sent to ${email}`);
       } catch (emailError) {
         console.error(`⚠️ EMAIL: Failed to send appointment confirmation to ${email}:`, emailError.message);
         // Don't fail the appointment creation if email fails
