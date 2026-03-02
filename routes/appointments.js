@@ -157,14 +157,6 @@ router.post('/',
         });
       }
 
-      if (!user.isEmailVerified) {
-        return res.status(403).json({
-          error: 'Please verify your email address before booking appointments',
-          requestId,
-          code: 'EMAIL_NOT_VERIFIED'
-        });
-      }
-
       // Check for duplicate appointments (same user, same day)
       if (appointmentDate) {
         const appointmentDay = new Date(appointmentDate);

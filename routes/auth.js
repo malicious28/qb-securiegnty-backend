@@ -225,11 +225,6 @@ router.post('/register',
         });
 
         if (existingUser) {
-          // If account exists but email is not verified, resend verification
-          if (!existingUser.isEmailVerified && existingUser.verificationToken) {
-            console.log(`🔄 UNVERIFIED ACCOUNT: Resending verification to ${email}`);
-            throw new Error('RESEND_VERIFICATION');
-          }
           console.log(`⚠️ EMAIL EXISTS: ${email} already registered`);
           throw new Error('EMAIL_ALREADY_EXISTS');
         }
@@ -240,14 +235,7 @@ router.post('/register',
         const saltRounds = 12;
         const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-        // Generate email verification token
-        const verificationToken = jwt.sign(
-          { email: email.toLowerCase(), purpose: 'email_verification' },
-          JWT_CONFIG.secret,
-          { expiresIn: '24h' }
-        );
-
-        // Create user
+        // Create user — auto-verified, no email verification required
         const newUser = await prisma.user.create({
           data: {
             firstName: xss(firstName.trim()),
@@ -255,8 +243,7 @@ router.post('/register',
             email: email.toLowerCase(),
             password: hashedPassword,
             country: country?.trim() || null,
-            isEmailVerified: process.env.NODE_ENV !== 'production', // Auto-verify in development
-            verificationToken
+            isEmailVerified: true
           }
         });
 
@@ -264,25 +251,23 @@ router.post('/register',
         return newUser;
       });
 
-      // SUCCESS RESPONSE - This is what frontend expects
       const successResponse = {
-        message: 'Registration successful! We\'ve sent a verification link to your email — please click it to activate your account.',
+        message: 'Account created successfully! You can now log in.',
         userId: result.id,
-        emailVerificationRequired: true,
         code: 'REGISTRATION_SUCCESS',
         success: true
       };
 
-      console.log(`✅ REGISTRATION SUCCESS: Sending response for ${email}`, successResponse);
+      console.log(`✅ REGISTRATION SUCCESS: ${email}`);
       res.status(201).json(successResponse);
 
-      // Send verification email asynchronously (don't block response)
+      // Send welcome email asynchronously
       setImmediate(async () => {
         try {
-          await getEmailService().sendVerificationEmail(email, `${firstName} ${lastName}`, result.verificationToken);
-          console.log(`📧 EMAIL SENT: Verification email delivered to ${email}`);
+          await getEmailService().sendWelcomeEmail(email, `${firstName} ${lastName}`);
+          console.log(`📧 Welcome email sent to ${email}`);
         } catch (emailError) {
-          console.error(`⚠️ EMAIL FAILED: Could not send verification email to ${email}:`, emailError.message);
+          console.error(`⚠️ Welcome email failed for ${email}:`, emailError.message);
         }
       });
 
@@ -290,27 +275,6 @@ router.post('/register',
       console.error(`🚨 REGISTRATION ERROR for ${email}:`, error.message);
       
       // Handle specific errors
-      if (error.message === 'RESEND_VERIFICATION') {
-        // Account exists but unverified — resend the verification email silently
-        setImmediate(async () => {
-          try {
-            const unverifiedUser = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
-            if (unverifiedUser?.verificationToken) {
-              await getEmailService().sendVerificationEmail(email, `${firstName} ${lastName}`, unverifiedUser.verificationToken);
-              console.log(`📧 RESENT: Verification email resent to ${email}`);
-            }
-          } catch (e) {
-            console.error(`⚠️ RESEND FAILED: ${e.message}`);
-          }
-        });
-        return res.status(200).json({
-          message: 'We\'ve resent a verification link to your email. Please check your inbox and click the link to activate your account.',
-          code: 'VERIFICATION_RESENT',
-          success: true,
-          emailVerificationRequired: true
-        });
-      }
-
       if (error.message === 'EMAIL_ALREADY_EXISTS') {
         return res.status(409).json({
           error: 'An account with this email already exists. Please log in.',
@@ -374,13 +338,6 @@ router.post('/login',
         });
       }
 
-      // Check if account is verified (skip in development)
-      if (!user.isEmailVerified && process.env.NODE_ENV === 'production') {
-        return res.status(403).json({ 
-          error: 'Please verify your email address before logging in',
-          code: 'EMAIL_NOT_VERIFIED'
-        });
-      }
 
       // Verify password
       const isValidPassword = await bcrypt.compare(password, user.password);
