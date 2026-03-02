@@ -220,8 +220,10 @@ router.post('/register',
       // Use transaction to ensure data consistency
       const result = await prisma.$transaction(async (prisma) => {
         // Check if user already exists
+        const normalizedEmail = email.toLowerCase().trim();
+
         const existingUser = await prisma.user.findUnique({
-          where: { email: email.toLowerCase() }
+          where: { email: normalizedEmail }
         });
 
         if (existingUser) {
@@ -240,7 +242,7 @@ router.post('/register',
           data: {
             firstName: xss(firstName.trim()),
             lastName: xss(lastName.trim()),
-            email: email.toLowerCase(),
+            email: normalizedEmail,
             password: hashedPassword,
             country: country?.trim() || null,
             isEmailVerified: true
@@ -308,9 +310,9 @@ router.post('/register',
 // SECURE LOGIN ENDPOINT
 // ============================================
 
-router.post('/login', 
+router.post('/login',
   authLimiter,
-  [...emailValidation],
+  body('email').isEmail().withMessage('Valid email required'),
   body('password').notEmpty().withMessage('Password is required'),
   async (req, res) => {
     try {
@@ -325,19 +327,25 @@ router.post('/login',
 
       const { email, password } = req.body;
 
-      // Find user
-      const user = await prisma.user.findUnique({ 
-        where: { email: email.toLowerCase() } 
+      // Find user — use plain lowercase, no normalizeEmail transformation
+      const user = await prisma.user.findUnique({
+        where: { email: email.toLowerCase().trim() }
       });
 
       if (!user) {
-        // Don't reveal if email exists or not
-        return res.status(401).json({ 
+        return res.status(401).json({
           error: 'Invalid email or password',
           code: 'INVALID_CREDENTIALS'
         });
       }
 
+      // Google OAuth accounts have no password
+      if (!user.password) {
+        return res.status(401).json({
+          error: 'This account uses Google Sign-In. Please log in with Google.',
+          code: 'USE_GOOGLE_LOGIN'
+        });
+      }
 
       // Verify password
       const isValidPassword = await bcrypt.compare(password, user.password);
