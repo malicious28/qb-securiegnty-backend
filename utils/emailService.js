@@ -9,24 +9,15 @@ class EmailService {
 
     setupResend() {
         try {
-            console.log('🔄 Setting up Resend email service...');
-            console.log('🔍 Checking RESEND_API_KEY:', process.env.RESEND_API_KEY ? 'Present' : 'Missing');
-            
-            // Check if Resend API key is available
             if (!process.env.RESEND_API_KEY) {
-                console.log('⚠️ RESEND_API_KEY not found in environment variables');
-                console.log('📋 Available env variables:', Object.keys(process.env).filter(key => key.includes('RESEND')));
+                console.log('⚠️ RESEND_API_KEY not found — email service disabled');
                 return;
             }
-
-            // Initialize Resend with API key
             this.resend = new Resend(process.env.RESEND_API_KEY);
             this.isConfigured = true;
-            console.log('✅ Resend email service configured successfully');
-            
+            console.log('✅ Resend email service configured');
         } catch (error) {
-            console.error('❌ Resend email service configuration failed:', error.message);
-            console.error('📋 Error stack:', error.stack);
+            console.error('❌ Resend setup failed:', error.message);
             this.isConfigured = false;
         }
     }
@@ -36,227 +27,218 @@ class EmailService {
             console.log('⚠️ Resend not configured');
             return false;
         }
-
-        try {
-            // Resend doesn't have a verify method like nodemailer, 
-            // so we'll just check if the service is configured
-            console.log('✅ Resend email service ready');
-            return true;
-        } catch (error) {
-            console.error('❌ Resend connection test failed:', error.message);
-            console.error('💡 Check your RESEND_API_KEY in .env file');
-            this.isConfigured = false;
-            return false;
-        }
+        console.log('✅ Resend email service ready');
+        return true;
     }
 
     async sendEmail(mailOptions) {
-        console.log('📧 sendEmail called with isConfigured:', this.isConfigured);
-        console.log('📧 Resend instance:', this.resend ? 'Present' : 'Missing');
-        
         if (!this.isConfigured || !this.resend) {
-            console.error('❌ Resend email service not configured');
-            console.error('📋 Debug info:', { 
-                isConfigured: this.isConfigured, 
-                hasResend: !!this.resend,
-                hasApiKey: !!process.env.RESEND_API_KEY 
-            });
             throw new Error('Email service not available');
         }
 
+        const senderEmail = process.env.SENDER_EMAIL || 'admin@qbsecuriegnty.com';
+        const fromAddress = `QB Securiegnty <${senderEmail}>`;
+
         try {
-            console.log(`📧 Sending email to: ${mailOptions.to}`);
-            
-            // Primary sender: Custom domain (once verified)
-            // Fallback: Resend default domain
-            const senderEmail = process.env.SENDER_EMAIL || 'admin@qbsecuriegnty.com';
-            let fromAddress = `QB Securiegnty Admin <${senderEmail}>`;
-            
             const result = await this.resend.emails.send({
                 from: fromAddress,
                 to: mailOptions.to,
                 subject: mailOptions.subject,
                 html: mailOptions.html
             });
-            console.log('✅ Email sent successfully:', result.data?.id || 'sent');
-            console.log(`📤 Sent from: ${fromAddress}`);
+            console.log(`📧 Email sent to ${mailOptions.to}: ${result.data?.id || 'ok'}`);
             return result;
         } catch (error) {
-            console.error('❌ Failed to send email:', error.message);
-            
-            // If custom domain fails, try fallback (for unverified domains)
+            // Fallback to resend.dev sender if custom domain not verified
             if (error.message.includes('domain') || error.message.includes('verify')) {
-                console.log('🔄 Trying fallback sender...');
-                try {
-                    const result = await this.resend.emails.send({
-                        from: 'QB Securiegnty <onboarding@resend.dev>',
-                        to: mailOptions.to,
-                        subject: mailOptions.subject,
-                        html: mailOptions.html
-                    });
-                    console.log('✅ Email sent via fallback:', result.data?.id || 'sent');
-                    console.log('⚠️ Note: Using fallback sender. Verify your domain in Resend dashboard.');
-                    return result;
-                } catch (fallbackError) {
-                    console.error('❌ Fallback also failed:', fallbackError.message);
-                    throw fallbackError;
-                }
+                const result = await this.resend.emails.send({
+                    from: 'QB Securiegnty <onboarding@resend.dev>',
+                    to: mailOptions.to,
+                    subject: mailOptions.subject,
+                    html: mailOptions.html
+                });
+                console.log(`📧 Email sent via fallback to ${mailOptions.to}`);
+                return result;
             }
             throw error;
         }
     }
 
+    // ─── Shared layout wrapper ────────────────────────────────────────────────
+    _wrap(content) {
+        return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QB Securiegnty</title>
+</head>
+<body style="margin:0;padding:0;background-color:#0a0a0f;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0a0a0f;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" style="max-width:580px;">
+
+          <!-- Header -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#6c63ff 0%,#3b2fa0 100%);border-radius:12px 12px 0 0;padding:32px 40px;text-align:center;">
+              <p style="margin:0 0 4px 0;font-size:11px;font-weight:700;letter-spacing:3px;color:rgba(255,255,255,0.5);text-transform:uppercase;">QB Securiegnty</p>
+              <h1 style="margin:0;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">Secure Intelligence Platform</h1>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="background:#13131a;padding:36px 40px;border-left:1px solid #1e1e2e;border-right:1px solid #1e1e2e;">
+              ${content}
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background:#0d0d14;border:1px solid #1e1e2e;border-top:none;border-radius:0 0 12px 12px;padding:20px 40px;text-align:center;">
+              <p style="margin:0;font-size:11px;color:#3d3d5c;">© ${new Date().getFullYear()} QB Securiegnty. All rights reserved.</p>
+              <p style="margin:6px 0 0 0;font-size:11px;color:#2a2a40;">If you did not expect this email, you can safely ignore it.</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+    }
+
+    // ─── Welcome email (sent on registration) ────────────────────────────────
+    async sendWelcomeEmail(to, name) {
+        const html = this._wrap(`
+            <h2 style="margin:0 0 8px 0;font-size:20px;font-weight:700;color:#ffffff;">Welcome, ${name || 'there'}</h2>
+            <p style="margin:0 0 24px 0;font-size:14px;color:#8888aa;line-height:1.6;">Your account has been created successfully. You're now part of the QB Securiegnty platform.</p>
+
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#1a1a28;border:1px solid #2a2a40;border-radius:8px;margin-bottom:24px;">
+              <tr>
+                <td style="padding:20px 24px;">
+                  <p style="margin:0 0 10px 0;font-size:12px;font-weight:700;letter-spacing:2px;color:#6c63ff;text-transform:uppercase;">Your account</p>
+                  <p style="margin:0;font-size:14px;color:#ccccdd;"><strong style="color:#ffffff;">Email:</strong> ${to}</p>
+                </td>
+              </tr>
+            </table>
+
+            <p style="margin:0;font-size:13px;color:#5a5a7a;line-height:1.6;">You can now log in and access all platform features. Reach out if you need anything.</p>
+            <p style="margin:16px 0 0 0;font-size:13px;color:#5a5a7a;">— The QB Securiegnty Team</p>
+        `);
+
+        return await this.sendEmail({
+            to,
+            subject: 'Welcome to QB Securiegnty',
+            html
+        });
+    }
+
+    // ─── Early access email ───────────────────────────────────────────────────
     async sendEarlyAccessEmail(to, name) {
-        const mailOptions = {
-            to,
-            subject: '🎉 Welcome to QB Securiegnty Early Access!',
-            html: `
-                <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px; overflow: hidden;">
-                    <div style="background: rgba(255, 255, 255, 0.1); padding: 30px; text-align: center; backdrop-filter: blur(10px);">
-                        <h1 style="color: white; font-size: 2.5em; margin: 0; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);">🛡️ QB Securiegnty</h1>
-                        <p style="color: rgba(255, 255, 255, 0.9); font-size: 1.2em; margin: 10px 0;">Ultra-Secure Platform</p>
-                    </div>
-                    <div style="background: white; padding: 30px;">
-                        <h2 style="color: #333; margin-top: 0;">Hi ${name || 'there'},</h2>
-                        <p style="color: #555; line-height: 1.6;">Thank you for signing up for early access to <strong>QB Securiegnty</strong>!</p>
-                        <p style="color: #555; line-height: 1.6;">🔒 You're now part of our exclusive early access program</p>
-                        <p style="color: #555; line-height: 1.6;">🚀 You'll be the first to know about our launch</p>
-                        <p style="color: #555; line-height: 1.6;">💎 Get exclusive updates and features</p>
-                        <div style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 20px; border-radius: 10px; margin: 20px 0; text-align: center;">
-                            <p style="margin: 0; font-weight: bold;">🎉 Welcome to the future of security!</p>
-                        </div>
-                        <p style="color: #555; line-height: 1.6; margin-top: 30px;">Stay tuned for updates!</p>
-                        <p style="color: #555; line-height: 1.6;"><strong>The QB Securiegnty Team</strong></p>
-                        <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #888; text-align: center;">
-                            If you did not request early access, you can safely ignore this email.
-                        </div>
-                    </div>
-                </div>
-            `
-        };
+        const html = this._wrap(`
+            <h2 style="margin:0 0 8px 0;font-size:20px;font-weight:700;color:#ffffff;">You're on the list, ${name || 'there'}</h2>
+            <p style="margin:0 0 24px 0;font-size:14px;color:#8888aa;line-height:1.6;">Thanks for signing up for early access to QB Securiegnty. We'll reach out as soon as a spot opens up.</p>
 
-        return await this.sendEmail(mailOptions);
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#1a1a28;border:1px solid #2a2a40;border-radius:8px;margin-bottom:24px;">
+              <tr>
+                <td style="padding:20px 24px;">
+                  <p style="margin:0 0 6px 0;font-size:12px;font-weight:700;letter-spacing:2px;color:#6c63ff;text-transform:uppercase;">What's next</p>
+                  <p style="margin:0 0 6px 0;font-size:14px;color:#ccccdd;">→ You'll be notified when early access opens</p>
+                  <p style="margin:0 0 6px 0;font-size:14px;color:#ccccdd;">→ Priority access before public launch</p>
+                  <p style="margin:0;font-size:14px;color:#ccccdd;">→ Exclusive updates from our team</p>
+                </td>
+              </tr>
+            </table>
+
+            <p style="margin:0;font-size:13px;color:#5a5a7a;">— The QB Securiegnty Team</p>
+        `);
+
+        return await this.sendEmail({
+            to,
+            subject: 'Early Access Request Received — QB Securiegnty',
+            html
+        });
     }
 
+    // ─── Appointment confirmation ─────────────────────────────────────────────
     async sendAppointmentConfirmationEmail({ to, name, date, phone, message }) {
-        const mailOptions = {
+        const detailRows = [
+            { label: 'Name', value: name },
+            { label: 'Email', value: to },
+            phone ? { label: 'Phone', value: phone } : null,
+            date ? { label: 'Preferred Date', value: new Date(date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) } : null,
+            message ? { label: 'Message', value: message } : null,
+        ].filter(Boolean);
+
+        const rows = detailRows.map(r =>
+            `<tr><td style="padding:8px 0;font-size:13px;color:#5a5a7a;width:110px;vertical-align:top;">${r.label}</td><td style="padding:8px 0;font-size:13px;color:#ccccdd;">${r.value}</td></tr>`
+        ).join('');
+
+        const html = this._wrap(`
+            <h2 style="margin:0 0 8px 0;font-size:20px;font-weight:700;color:#ffffff;">Appointment Confirmed</h2>
+            <p style="margin:0 0 24px 0;font-size:14px;color:#8888aa;line-height:1.6;">We've received your appointment request. Our team will follow up shortly to confirm the details.</p>
+
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#1a1a28;border:1px solid #2a2a40;border-radius:8px;margin-bottom:24px;">
+              <tr>
+                <td style="padding:20px 24px;">
+                  <p style="margin:0 0 14px 0;font-size:12px;font-weight:700;letter-spacing:2px;color:#6c63ff;text-transform:uppercase;">Appointment Details</p>
+                  <table width="100%" cellpadding="0" cellspacing="0">${rows}</table>
+                </td>
+              </tr>
+            </table>
+
+            <p style="margin:0;font-size:13px;color:#5a5a7a;">— The QB Securiegnty Team</p>
+        `);
+
+        return await this.sendEmail({
             to,
-            subject: '✅ Appointment Confirmed | QB Securiegnty',
-            html: `
-                <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px; overflow: hidden;">
-                    <div style="background: rgba(255, 255, 255, 0.1); padding: 30px; text-align: center; backdrop-filter: blur(10px);">
-                        <h1 style="color: white; font-size: 2em; margin: 0; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);">✅ APPOINTMENT CONFIRMED</h1>
-                        <p style="color: rgba(255, 255, 255, 0.9); font-size: 1.1em; margin: 10px 0;">QB Securiegnty</p>
-                    </div>
-                    <div style="background: white; padding: 30px;">
-                        <h2 style="color: #333; margin-top: 0;">Hello ${name},</h2>
-                        <p style="color: #555; line-height: 1.6;">Thank you for choosing QB Securiegnty. Your appointment has been confirmed!</p>
-                        
-                        <div style="background: #f8f9fa; border-left: 4px solid #667eea; padding: 20px; margin: 20px 0; border-radius: 5px;">
-                            <h3 style="color: #333; margin-top: 0;">📋 Appointment Details</h3>
-                            <p style="margin: 8px 0; color: #555;"><strong>Name:</strong> ${name}</p>
-                            <p style="margin: 8px 0; color: #555;"><strong>Email:</strong> ${to}</p>
-                            ${phone ? `<p style="margin: 8px 0; color: #555;"><strong>Phone:</strong> ${phone}</p>` : ''}
-                            ${date ? `<p style="margin: 8px 0; color: #555;"><strong>Preferred Date:</strong> ${date}</p>` : ''}
-                            ${message ? `<p style="margin: 8px 0; color: #555;"><strong>Message:</strong> ${message}</p>` : ''}
-                        </div>
-
-                        <p style="color: #555; line-height: 1.6;">We'll contact you soon to finalize the meeting details.</p>
-                        <p style="color: #555; line-height: 1.6;"><strong>The QB Securiegnty Team</strong></p>
-                        
-                        <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #888; text-align: center;">
-                            If you did not request this appointment, please contact us immediately.
-                        </div>
-                    </div>
-                </div>
-            `
-        };
-
-        return await this.sendEmail(mailOptions);
+            subject: 'Appointment Confirmed — QB Securiegnty',
+            html
+        });
     }
 
-    async sendWelcomeEmail(to, name, tempPassword = null) {
-        const mailOptions = {
-            to,
-            subject: '🎉 Welcome to QB Securiegnty!',
-            html: `
-                <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px; overflow: hidden;">
-                    <div style="background: rgba(255, 255, 255, 0.1); padding: 30px; text-align: center; backdrop-filter: blur(10px);">
-                        <h1 style="color: white; font-size: 2.5em; margin: 0; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);">🛡️ QB Securiegnty</h1>
-                        <p style="color: rgba(255, 255, 255, 0.9); font-size: 1.2em; margin: 10px 0;">Welcome to Ultra-Secure Platform</p>
-                    </div>
-                    <div style="background: white; padding: 30px;">
-                        <h2 style="color: #333; margin-top: 0;">Welcome ${name}!</h2>
-                        <p style="color: #555; line-height: 1.6;">Your account has been successfully created on QB Securiegnty.</p>
-                        
-                        ${tempPassword ? `
-                        <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 20px; margin: 20px 0; border-radius: 10px;">
-                            <h3 style="color: #856404; margin-top: 0;">🔑 Temporary Login Credentials</h3>
-                            <p style="color: #856404; margin: 8px 0;"><strong>Email:</strong> ${to}</p>
-                            <p style="color: #856404; margin: 8px 0;"><strong>Temporary Password:</strong> ${tempPassword}</p>
-                            <p style="color: #856404; margin: 8px 0; font-size: 14px;"><em>Please change your password after first login</em></p>
-                        </div>
-                        ` : ''}
-
-                        <div style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 20px; border-radius: 10px; margin: 20px 0; text-align: center;">
-                            <p style="margin: 0; font-weight: bold;">🚀 Your ultra-secure journey starts now!</p>
-                        </div>
-
-                        <p style="color: #555; line-height: 1.6;">Thank you for joining our secure platform.</p>
-                        <p style="color: #555; line-height: 1.6;"><strong>The QB Securiegnty Team</strong></p>
-                        
-                        <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #888; text-align: center;">
-                            This email was sent because an account was created with this email address.
-                        </div>
-                    </div>
-                </div>
-            `
-        };
-
-        return await this.sendEmail(mailOptions);
-    }
-
+    // ─── Password reset ───────────────────────────────────────────────────────
     async sendPasswordResetEmail(to, resetToken) {
         const resetUrl = `${process.env.FRONTEND_URL || 'https://qbsecuriegnty.com'}/reset-password?token=${resetToken}`;
-        
-        const mailOptions = {
+
+        const html = this._wrap(`
+            <h2 style="margin:0 0 8px 0;font-size:20px;font-weight:700;color:#ffffff;">Reset your password</h2>
+            <p style="margin:0 0 24px 0;font-size:14px;color:#8888aa;line-height:1.6;">We received a request to reset the password for your QB Securiegnty account. Click the button below to set a new password.</p>
+
+            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+              <tr>
+                <td align="center">
+                  <a href="${resetUrl}"
+                     style="display:inline-block;background:linear-gradient(135deg,#6c63ff,#3b2fa0);color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;padding:13px 32px;border-radius:7px;letter-spacing:0.3px;">
+                    Reset Password
+                  </a>
+                </td>
+              </tr>
+            </table>
+
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#1a1a28;border:1px solid #2a2a40;border-radius:8px;margin-bottom:24px;">
+              <tr>
+                <td style="padding:16px 24px;">
+                  <p style="margin:0;font-size:12px;color:#5a5a7a;line-height:1.6;">This link expires in <strong style="color:#8888aa;">1 hour</strong>. If you didn't request a password reset, you can ignore this email — your password will not change.</p>
+                </td>
+              </tr>
+            </table>
+
+            <p style="margin:0;font-size:12px;color:#3d3d5c;word-break:break-all;">Or copy this URL: ${resetUrl}</p>
+        `);
+
+        return await this.sendEmail({
             to,
-            subject: '🔒 Password Reset Request | QB Securiegnty',
-            html: `
-                <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px; overflow: hidden;">
-                    <div style="background: rgba(255, 255, 255, 0.1); padding: 30px; text-align: center; backdrop-filter: blur(10px);">
-                        <h1 style="color: white; font-size: 2em; margin: 0; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);">🔒 PASSWORD RESET</h1>
-                        <p style="color: rgba(255, 255, 255, 0.9); font-size: 1.1em; margin: 10px 0;">QB Securiegnty</p>
-                    </div>
-                    <div style="background: white; padding: 30px;">
-                        <h2 style="color: #333; margin-top: 0;">Password Reset Request</h2>
-                        <p style="color: #555; line-height: 1.6;">We received a request to reset your password for your QB Securiegnty account.</p>
-                        
-                        <div style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 20px; border-radius: 10px; margin: 20px 0; text-align: center;">
-                            <p style="margin: 0 0 10px 0; font-weight: bold;">🔗 Reset your password:</p>
-                            <a href="${resetUrl}" style="color: white; text-decoration: underline; font-size: 16px;">Click here to reset your password</a>
-                        </div>
-
-                        <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; margin: 20px 0; border-radius: 5px;">
-                            <p style="color: #856404; margin: 0; font-size: 14px;">⏰ This link will expire in 1 hour for security reasons.</p>
-                        </div>
-
-                        <p style="color: #555; line-height: 1.6;">If you didn't request this password reset, please ignore this email.</p>
-                        <p style="color: #555; line-height: 1.6;"><strong>The QB Securiegnty Team</strong></p>
-                        
-                        <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #888; text-align: center;">
-                            For security reasons, never share this email or link with anyone.
-                        </div>
-                    </div>
-                </div>
-            `
-        };
-
-        return await this.sendEmail(mailOptions);
+            subject: 'Password Reset Request — QB Securiegnty',
+            html
+        });
     }
 }
 
-// Create singleton instance
+// Singleton instance
 const emailService = new EmailService();
 
 module.exports = emailService;

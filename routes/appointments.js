@@ -34,34 +34,39 @@ const appointmentLimiter = rateLimit({
 // ============================================
 
 const appointmentValidation = [
+  // Accept either a combined `name` or separate `firstName` + `lastName`
   body('name')
+    .optional()
     .trim()
-    .isLength({ min: 1, max: 100 })
-    .withMessage('Name must be between 1 and 100 characters')
-    .matches(/^[a-zA-Z\s'-\.]+$/)
-    .withMessage('Name can only contain letters, spaces, apostrophes, hyphens, and periods')
+    .isLength({ max: 100 })
+    .withMessage('Name cannot exceed 100 characters')
+    .customSanitizer(value => xss(value)),
+
+  body('firstName')
+    .optional()
+    .trim()
+    .isLength({ max: 50 })
+    .withMessage('First name cannot exceed 50 characters')
+    .customSanitizer(value => xss(value)),
+
+  body('lastName')
+    .optional()
+    .trim()
+    .isLength({ max: 50 })
+    .withMessage('Last name cannot exceed 50 characters')
     .customSanitizer(value => xss(value)),
 
   body('email')
     .isEmail()
     .withMessage('Please provide a valid email address')
-    .normalizeEmail()
     .isLength({ min: 5, max: 254 })
-    .withMessage('Email must be between 5 and 254 characters')
-    .custom((email) => {
-      if (!validator.isEmail(email)) {
-        throw new Error('Invalid email format');
-      }
-      return true;
-    }),
+    .withMessage('Email must be between 5 and 254 characters'),
 
   body('phone')
     .optional()
     .trim()
-    .isLength({ max: 20 })
-    .withMessage('Phone number cannot exceed 20 characters')
-    .matches(/^[+]?[\d\s\-\(\)\.]+$/)
-    .withMessage('Phone number contains invalid characters')
+    .isLength({ max: 25 })
+    .withMessage('Phone number cannot exceed 25 characters')
     .customSanitizer(value => value ? xss(value) : value),
 
   body('message')
@@ -69,13 +74,7 @@ const appointmentValidation = [
     .trim()
     .isLength({ max: 1000 })
     .withMessage('Message cannot exceed 1000 characters')
-    .customSanitizer(value => value ? xss(value) : value)
-    .custom((value) => {
-      if (value && /script|javascript|<|>|&lt;|&gt;/i.test(value)) {
-        throw new Error('Message contains invalid characters');
-      }
-      return true;
-    }),
+    .customSanitizer(value => value ? xss(value) : value),
 
   body('appointmentDate')
     .optional()
@@ -83,18 +82,9 @@ const appointmentValidation = [
     .withMessage('Invalid appointment date format')
     .custom((value) => {
       if (value) {
-        const appointmentDate = new Date(value);
-        const now = new Date();
-        
-        // Can't book appointments in the past
-        if (appointmentDate <= now) {
-          throw new Error('Appointment date must be in the future');
-        }
-        
-        // Can't book appointments more than 6 months in advance
         const sixMonthsFromNow = new Date();
         sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
-        if (appointmentDate > sixMonthsFromNow) {
+        if (new Date(value) > sixMonthsFromNow) {
           throw new Error('Appointment date cannot be more than 6 months in advance');
         }
       }
@@ -105,16 +95,6 @@ const appointmentValidation = [
     .optional()
     .isIn(['consultation', 'follow-up', 'emergency', 'general'])
     .withMessage('Invalid appointment type'),
-
-  // Security: Reject any extra fields
-  body().custom((value, { req }) => {
-    const allowedFields = ['name', 'email', 'phone', 'message', 'appointmentDate', 'appointmentType'];
-    const extraFields = Object.keys(req.body).filter(key => !allowedFields.includes(key));
-    if (extraFields.length > 0) {
-      throw new Error(`Unauthorized fields detected: ${extraFields.join(', ')}`);
-    }
-    return true;
-  })
 ];
 
 // ============================================
@@ -139,7 +119,11 @@ router.post('/',
         });
       }
 
-      const { name, email, phone, message, appointmentDate, appointmentType } = req.body;
+      const { firstName, lastName, email, phone, message, appointmentDate, appointmentType } = req.body;
+      const name = req.body.name || [firstName, lastName].filter(Boolean).join(' ').trim() || 'Guest';
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required', requestId, code: 'VALIDATION_ERROR' });
+      }
 
       // Check for duplicate appointments (same email, same day)
       if (appointmentDate) {
