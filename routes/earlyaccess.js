@@ -4,7 +4,6 @@ const { getPrismaClient } = require('../utils/prisma');
 const { body, validationResult } = require('express-validator');
 const rateLimit = require('express-rate-limit');
 const xss = require('xss');
-const validator = require('validator');
 const emailService = require('../utils/emailService');
 const router = express.Router();
 
@@ -56,73 +55,32 @@ const earlyAccessValidation = [
     .trim()
     .isLength({ min: 1, max: 100 })
     .withMessage('Name must be between 1 and 100 characters')
-    .matches(/^[a-zA-Z\s'-\.]+$/)
-    .withMessage('Name can only contain letters, spaces, apostrophes, hyphens, and periods')
-    .customSanitizer(value => xss(value))
-    .custom((value) => {
-      // Check for suspicious patterns
-      if (/script|javascript|<|>|&lt;|&gt;/i.test(value)) {
-        throw new Error('Name contains invalid characters');
-      }
-      return true;
-    }),
+    .customSanitizer(value => xss(value)),
 
   body('email')
     .isEmail()
     .withMessage('Please provide a valid email address')
-    .normalizeEmail()
     .isLength({ min: 5, max: 254 })
     .withMessage('Email must be between 5 and 254 characters')
-    .custom(async (email) => {
-      // Enhanced email validation
-      if (!validator.isEmail(email)) {
-        throw new Error('Invalid email format');
-      }
-      
-      // Check for disposable email domains (expanded list)
+    .custom((email) => {
       const disposableDomains = [
         '10minutemail.com', 'tempmail.org', 'guerrillamail.com',
         'mailinator.com', 'yopmail.com', 'temp-mail.org',
         'throwaway.email', 'maildrop.cc', 'fakeinbox.com'
       ];
-      
       const domain = email.split('@')[1]?.toLowerCase();
       if (disposableDomains.includes(domain)) {
         throw new Error('Disposable email addresses are not allowed');
       }
-      
-      // Check for suspicious patterns
-      if (/test|temp|fake|spam|abuse/i.test(email)) {
-        console.log(`⚠️ SECURITY: Suspicious email pattern detected: ${email}`);
-      }
-      
       return true;
     }),
 
   body('occupation')
+    .optional()
     .trim()
-    .isLength({ min: 1, max: 100 })
-    .withMessage('Occupation must be between 1 and 100 characters')
-    .matches(/^[a-zA-Z\s'-\.\/&]+$/)
-    .withMessage('Occupation can only contain letters, spaces, apostrophes, hyphens, periods, slashes, and ampersands')
-    .customSanitizer(value => xss(value))
-    .custom((value) => {
-      // Check for suspicious patterns
-      if (/script|javascript|<|>|&lt;|&gt;|select|union|drop|delete|insert|update/i.test(value)) {
-        throw new Error('Occupation contains invalid characters');
-      }
-      return true;
-    }),
-
-  // Security: Reject any extra fields
-  body().custom((value, { req }) => {
-    const allowedFields = ['name', 'email', 'occupation'];
-    const extraFields = Object.keys(req.body).filter(key => !allowedFields.includes(key));
-    if (extraFields.length > 0) {
-      throw new Error(`Unauthorized fields detected: ${extraFields.join(', ')}`);
-    }
-    return true;
-  })
+    .isLength({ max: 100 })
+    .withMessage('Occupation cannot exceed 100 characters')
+    .customSanitizer(value => xss(value)),
 ];
 
 // ============================================
@@ -222,7 +180,7 @@ router.post('/',
       const sanitizedData = {
         name: xss(name.trim()),
         email: email.toLowerCase().trim(),
-        occupation: xss(occupation.trim())
+        occupation: occupation ? xss(occupation.trim()) : null
       };
 
       console.log(`💾 SECURITY: Saving early access request ${requestId} for ${sanitizedData.email} from IP ${req.ip}`);
