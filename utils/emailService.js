@@ -139,8 +139,6 @@ class EmailService {
     }
 
     async sendAppointmentConfirmationEmail({ to, name, date, phone, message }) {
-        const meetingFormUrl = `${process.env.FRONTEND_URL || 'https://qbsecuriegnty.com'}/meeting-details?email=${encodeURIComponent(to)}`;
-        
         const mailOptions = {
             to,
             subject: '✅ Appointment Confirmed | QB Securiegnty',
@@ -161,11 +159,6 @@ class EmailService {
                             ${phone ? `<p style="margin: 8px 0; color: #555;"><strong>Phone:</strong> ${phone}</p>` : ''}
                             ${date ? `<p style="margin: 8px 0; color: #555;"><strong>Preferred Date:</strong> ${date}</p>` : ''}
                             ${message ? `<p style="margin: 8px 0; color: #555;"><strong>Message:</strong> ${message}</p>` : ''}
-                        </div>
-
-                        <div style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 20px; border-radius: 10px; margin: 20px 0; text-align: center;">
-                            <p style="margin: 0; font-weight: bold;">🔗 Complete your meeting details:</p>
-                            <a href="${meetingFormUrl}" style="color: white; text-decoration: underline;">Click here to provide additional details</a>
                         </div>
 
                         <p style="color: #555; line-height: 1.6;">We'll contact you soon to finalize the meeting details.</p>
@@ -215,41 +208,6 @@ class EmailService {
                         <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #888; text-align: center;">
                             This email was sent because an account was created with this email address.
                         </div>
-                    </div>
-                </div>
-            `
-        };
-
-        return await this.sendEmail(mailOptions);
-    }
-
-    async sendVerificationEmail(to, name, verificationToken) {
-        const verifyUrl = `${process.env.FRONTEND_URL || 'https://qbsecuriegnty.com'}/verify-email?token=${verificationToken}`;
-
-        const mailOptions = {
-            to,
-            subject: '✅ Verify your email | QB Securiegnty',
-            html: `
-                <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px; overflow: hidden;">
-                    <div style="background: rgba(255, 255, 255, 0.1); padding: 30px; text-align: center; backdrop-filter: blur(10px);">
-                        <h1 style="color: white; font-size: 2.5em; margin: 0; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);">🛡️ QB Securiegnty</h1>
-                        <p style="color: rgba(255, 255, 255, 0.9); font-size: 1.2em; margin: 10px 0;">Verify your email address</p>
-                    </div>
-                    <div style="background: white; padding: 30px;">
-                        <h2 style="color: #333; margin-top: 0;">Hi ${name || 'there'},</h2>
-                        <p style="color: #555; line-height: 1.6;">Thanks for signing up! Please verify your email address to activate your account.</p>
-
-                        <div style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 20px; border-radius: 10px; margin: 20px 0; text-align: center;">
-                            <p style="margin: 0 0 10px 0; font-weight: bold;">🔗 Click below to verify your email:</p>
-                            <a href="${verifyUrl}" style="color: white; text-decoration: underline; font-size: 16px;">Verify my email address</a>
-                        </div>
-
-                        <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; margin: 20px 0; border-radius: 5px;">
-                            <p style="color: #856404; margin: 0; font-size: 14px;">⏰ This link expires in 24 hours.</p>
-                        </div>
-
-                        <p style="color: #555; line-height: 1.6;">If you did not create an account, you can safely ignore this email.</p>
-                        <p style="color: #555; line-height: 1.6;"><strong>The QB Securiegnty Team</strong></p>
                     </div>
                 </div>
             `
