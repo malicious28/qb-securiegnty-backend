@@ -620,20 +620,20 @@ router.get('/protected', authenticateToken, (req, res) => {
 // ============================================
 
 // Initiate Google OAuth
-router.get('/google', 
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://qbsecuriegnty.com';
+const BACKEND_URL = process.env.BACKEND_URL || 'https://qb-securiegnty-backend.onrender.com';
+
+router.get('/google',
   authLimiter,
   (req, res, next) => {
-    const callbackURL = process.env.GOOGLE_CALLBACK_URL || 
-      (process.env.NODE_ENV === 'production' 
-        ? 'https://qb-securiegnty-backend.onrender.com/api/auth/google/callback'
+    const callbackURL = process.env.GOOGLE_CALLBACK_URL ||
+      (process.env.NODE_ENV === 'production'
+        ? `${BACKEND_URL}/api/auth/google/callback`
         : `http://localhost:${process.env.PORT || 5000}/api/auth/google/callback`);
-    
-    console.log('🔐 Initiating Google OAuth with callback:', callbackURL);
-    
-    passport.authenticate('google', { 
+
+    passport.authenticate('google', {
       scope: ['profile', 'email'],
-      callbackURL: callbackURL,
-      session: false // Disable session - use stateless OAuth
+      callbackURL: callbackURL
     })(req, res, next);
   }
 );
@@ -641,11 +641,17 @@ router.get('/google',
 // Google OAuth callback
 router.get('/google/callback',
   authLimiter,
-  passport.authenticate('google', { 
-    failureRedirect: '/login?error=oauth_failed',
-    failureMessage: true,
-    session: false // Disable session - use stateless OAuth
-  }),
+  (req, res, next) => {
+    const callbackURL = process.env.GOOGLE_CALLBACK_URL ||
+      (process.env.NODE_ENV === 'production'
+        ? `${BACKEND_URL}/api/auth/google/callback`
+        : `http://localhost:${process.env.PORT || 5000}/api/auth/google/callback`);
+
+    passport.authenticate('google', {
+      callbackURL: callbackURL,
+      failureRedirect: `${FRONTEND_URL}/login?error=oauth_failed`,
+    })(req, res, next);
+  },
   async (req, res) => {
     try {
       console.log('🎉 Google OAuth callback hit');
