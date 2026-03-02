@@ -73,22 +73,46 @@ const JWT_CONFIG = {
 // Store for token revocation (in production, use Redis)
 const revokedTokens = new Set();
 
-// Enhanced JWT verification middleware
+// ── Cookie helpers ──────────────────────────────────────────────────────────
+const COOKIE_NAME = 'qbs_token';
+const COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
+
+function setAuthCookie(res, token) {
+  res.cookie(COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    // SameSite=None required for cross-site requests (frontend on Vercel, backend on Render)
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    maxAge: COOKIE_MAX_AGE,
+    path: '/'
+  });
+}
+
+function clearAuthCookie(res) {
+  res.cookie(COOKIE_NAME, '', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    maxAge: 0,
+    path: '/'
+  });
+}
+
+// ── JWT verification middleware (Authorization header OR cookie) ─────────────
 function authenticateToken(req, res, next) {
   try {
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-    
+    const token = (authHeader && authHeader.split(' ')[1]) || req.cookies?.[COOKIE_NAME];
+
     if (!token) {
-      return res.status(401).json({ 
+      return res.status(401).json({
         error: 'Access denied. No authentication token provided.',
         code: 'NO_TOKEN'
       });
     }
 
-    // Check if token is revoked
     if (revokedTokens.has(token)) {
-      return res.status(401).json({ 
+      return res.status(401).json({
         error: 'Token has been revoked. Please login again.',
         code: 'TOKEN_REVOKED'
       });
@@ -98,7 +122,7 @@ function authenticateToken(req, res, next) {
       if (err) {
         let errorMessage = 'Invalid authentication token.';
         let errorCode = 'INVALID_TOKEN';
-        
+
         if (err.name === 'TokenExpiredError') {
           errorMessage = 'Authentication token has expired. Please login again.';
           errorCode = 'TOKEN_EXPIRED';
@@ -106,19 +130,16 @@ function authenticateToken(req, res, next) {
           errorMessage = 'Malformed authentication token.';
           errorCode = 'MALFORMED_TOKEN';
         }
-        
-        return res.status(403).json({ 
-          error: errorMessage,
-          code: errorCode
-        });
+
+        return res.status(403).json({ error: errorMessage, code: errorCode });
       }
-      
+
       req.user = decoded;
       next();
     });
   } catch (error) {
     console.error('🚨 Authentication middleware error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Authentication service temporarily unavailable.',
       code: 'AUTH_SERVICE_ERROR'
     });
@@ -386,9 +407,12 @@ router.post('/login',
       // Log successful login
       console.log(`✅ SECURITY: Successful login for ${email} from IP ${req.ip}`);
 
+      // Set HttpOnly cookie (primary auth method)
+      setAuthCookie(res, accessToken);
+
       res.json({
         message: 'Login successful',
-        accessToken,
+        accessToken,   // kept for frontend transition
         refreshToken,
         user: {
           id: user.id,
@@ -418,26 +442,21 @@ router.post('/login',
 
 router.post('/logout', authenticateToken, (req, res) => {
   try {
-    // Get token from header
+    // Revoke token from whichever source was used
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-    
+    const token = (authHeader && authHeader.split(' ')[1]) || req.cookies?.[COOKIE_NAME];
     if (token) {
-      // Add token to revoked list
       revokedTokens.add(token);
-      console.log(`✅ SECURITY: Token revoked for user ${req.user.userId}`);
     }
 
-    res.json({ 
-      message: 'Logged out successfully',
-      code: 'LOGOUT_SUCCESS'
-    });
+    // Clear the HttpOnly cookie
+    clearAuthCookie(res);
+
+    console.log(`✅ Logout: user ${req.user.userId}`);
+    res.json({ message: 'Logged out successfully', code: 'LOGOUT_SUCCESS' });
   } catch (error) {
     console.error('🚨 Logout error:', error);
-    res.status(500).json({ 
-      error: 'Logout service temporarily unavailable',
-      code: 'LOGOUT_ERROR'
-    });
+    res.status(500).json({ error: 'Logout service temporarily unavailable', code: 'LOGOUT_ERROR' });
   }
 });
 
@@ -660,13 +679,15 @@ router.get('/google/callback',
       );
 
       console.log(`✅ Tokens generated for ${req.user.email}`);
-      
-      // Redirect to frontend with tokens
+
+      // Set HttpOnly cookie before redirect
+      setAuthCookie(res, accessToken);
+
+      // Redirect to frontend — tokens also in URL as fallback during transition
       const frontendUrl = process.env.FRONTEND_URL || 'https://qbsecuriegnty.com';
       const redirectUrl = `${frontendUrl}/social-login-success?token=${accessToken}&refresh=${refreshToken}`;
-      
+
       console.log(`✅ Redirecting to: ${frontendUrl}/social-login-success`);
-      
       res.redirect(redirectUrl);
       
     } catch (error) {

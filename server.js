@@ -12,6 +12,7 @@ require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
@@ -127,18 +128,11 @@ const corsOptions = {
       console.log(`✅ CORS: Development mode - allowing origin: ${origin}`);
       return callback(null, true);
     }
-    // Production mode - strict checking
+    // Production mode - strict checking against exact whitelist
     if (finalAllowedOrigins.includes(origin)) {
-      console.log(`✅ CORS: Allowing approved origin: ${origin}`);
       callback(null, true);
     } else {
-      // Allow OPTIONS preflight for all origins
-      if (origin && (typeof origin === 'string') && (origin.startsWith('http'))) {
-        if (callback && typeof callback === 'function' && (callback.length === 2)) {
-          return callback(null, true);
-        }
-      }
-      console.error(`🚨 SECURITY: CORS blocked unauthorized origin: ${origin}`);
+      console.error(`🚨 CORS blocked: ${origin}`);
       callback(new Error('CORS: Origin not allowed'), false);
     }
   },
@@ -158,6 +152,7 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+app.use(cookieParser());
 
 // ============================================
 // REQUEST PROCESSING & SECURITY MIDDLEWARE
